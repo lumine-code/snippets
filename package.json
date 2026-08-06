@@ -33,7 +33,8 @@
     "test": "lumine --test spec",
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "parse": "peggy -o ./lib/snippet-body.js ./lib/snippet-body.pegjs"
   },
   "providedServices": {
     "snippets": {
@@ -48,8 +49,7 @@
     "@lumine-code/scoped-property-store": "github:lumine-code/scoped-property-store#a05ae79feda85e55cb3995f2d50238b5030035ef",
     "@lumine-code/season": "github:lumine-code/season#3516a8a6e96e7128fd65050909cba351a3ed6361",
     "@lumine-code/underscore-plus": "github:lumine-code/underscore-plus#3187fd4c2dd47f50044efe51deb7c662ddac437c",
-    "async": "3.2.6",
-    "pegjs": "^0.10.0"
+    "async": "3.2.6"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -58,6 +58,7 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-n": "^18.2.2",
     "globals": "^17.9.0",
+    "peggy": "^5.1.0",
     "prettier": "^3.9.6"
   }
 }

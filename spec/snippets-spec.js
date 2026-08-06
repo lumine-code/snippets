@@ -119,7 +119,7 @@ describe("Snippets extension", () => {
     const snippets = atom.packages.getActivePackage("snippets").mainModule;
 
     let invalidSnippets = null;
-    spyOn(snippets.scopedPropertyStore, "getPropertyValue").andCallFake(() => invalidSnippets);
+    spyOn(snippets.selectorStore, "getPropertyValue").andCallFake(() => invalidSnippets);
     expect(snippets.getSnippets(editor)).toEqual({});
 
     invalidSnippets = "test";

@@ -2105,7 +2105,9 @@ foo\
 
       delete Snippets.availableSnippetsView;
 
-      atom.commands.dispatch(editorElement, "snippets:available");
+      // snippets:available is registered on atom-workspace: it acts on the
+      // active editor, so unlike expansion it need not reach a detached one.
+      atom.commands.dispatch(atom.workspace.getElement(), "snippets:available");
 
       waitsFor(() => atom.workspace.getModalPanels().length === 1);
 
@@ -2141,10 +2143,7 @@ foo\
     });
 
     it("closes the dialog when triggered again", () => {
-      atom.commands.dispatch(
-        availableSnippetsView.selectListView.refs.queryEditor.element,
-        "snippets:available",
-      );
+      atom.commands.dispatch(atom.workspace.getElement(), "snippets:available");
       expect(atom.workspace.getModalPanels().filter((panel) => panel.isVisible()).length).toBe(0);
     });
   });

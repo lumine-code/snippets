@@ -129,11 +129,7 @@ describe("Snippet Loading", () => {
   describe("::loadPackageSnippets(callback)", () => {
     const jsPackage = () => {
       const pack = atom.packages.loadPackage("language-javascript");
-      pack.path = path.join(
-        atom.getLoadSettings().resourcePath,
-        "node_modules",
-        "language-javascript",
-      );
+      pack.path = path.join(atom.app.getResourcePath(), "node_modules", "language-javascript");
       return pack;
     };
 

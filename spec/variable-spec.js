@@ -1,5 +1,5 @@
 const Variable = require("../lib/variable");
-const { Point } = require("atom");
+const { Point } = require("lumine");
 
 describe("Variable", () => {
   let fakeCursor = {

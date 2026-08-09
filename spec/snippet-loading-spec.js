@@ -7,30 +7,30 @@ describe("Snippet Loading", () => {
   let configDirPath, snippetsService;
 
   beforeEach(() => {
-    configDirPath = temp.mkdirSync("atom-config-dir-");
-    spyOn(atom, "getConfigDirPath").andReturn(configDirPath);
+    configDirPath = temp.mkdirSync("lumine-config-dir-");
+    spyOn(lumine, "getConfigDirPath").andReturn(configDirPath);
 
     spyOn(console, "warn");
-    if (atom.notifications != null) {
-      spyOn(atom.notifications, "addError");
+    if (lumine.notifications != null) {
+      spyOn(lumine.notifications, "addError");
     }
 
-    spyOn(atom.packages, "getLoadedPackages").andReturn([
-      atom.packages.loadPackage(path.join(__dirname, "fixtures", "package-with-snippets")),
-      atom.packages.loadPackage(path.join(__dirname, "fixtures", "package-with-broken-snippets")),
+    spyOn(lumine.packages, "getLoadedPackages").andReturn([
+      lumine.packages.loadPackage(path.join(__dirname, "fixtures", "package-with-snippets")),
+      lumine.packages.loadPackage(path.join(__dirname, "fixtures", "package-with-broken-snippets")),
     ]);
   });
 
   afterEach(async () => {
     jasmine.useRealClock();
-    await atom.packages.deactivatePackage("snippets");
-    jasmine.unspy(atom.packages, "getLoadedPackages");
+    await lumine.packages.deactivatePackage("snippets");
+    jasmine.unspy(lumine.packages, "getLoadedPackages");
     // Give `pathwatcher` some room to breathe.
     await wait(50);
   });
 
   async function activateSnippetsPackagePromise() {
-    let { mainModule } = await atom.packages.activatePackage("snippets");
+    let { mainModule } = await lumine.packages.activatePackage("snippets");
     snippetsService = mainModule.provideSnippets();
     mainModule.loaded = false;
     await mainModule.waitForSnippetsLoaded();
@@ -42,7 +42,7 @@ describe("Snippet Loading", () => {
 
   const activateSnippetsPackage = () => {
     waitsForPromise(() =>
-      atom.packages.activatePackage("snippets").then(({ mainModule }) => {
+      lumine.packages.activatePackage("snippets").then(({ mainModule }) => {
         snippetsService = mainModule.provideSnippets();
         mainModule.loaded = false;
       }),
@@ -71,7 +71,7 @@ describe("Snippet Loading", () => {
     });
   });
 
-  it("loads non-hidden snippet files from atom packages with snippets directories", () => {
+  it("loads non-hidden snippet files from lumine packages with snippets directories", () => {
     activateSnippetsPackage();
 
     runs(() => {
@@ -100,7 +100,7 @@ describe("Snippet Loading", () => {
 
   it("registers a command if a package snippet defines one", () => {
     waitsForPromise(() => {
-      return atom.packages.activatePackage("snippets").then(({ mainModule }) => {
+      return lumine.packages.activatePackage("snippets").then(({ mainModule }) => {
         return new Promise((resolve) => {
           mainModule.onDidLoadSnippets(resolve);
         });
@@ -108,7 +108,7 @@ describe("Snippet Loading", () => {
     });
 
     runs(() => {
-      expect("package-with-snippets:test-command-name" in atom.commands.registeredCommands).toBe(
+      expect("package-with-snippets:test-command-name" in lumine.commands.registeredCommands).toBe(
         true,
       );
     });
@@ -128,15 +128,15 @@ describe("Snippet Loading", () => {
 
   describe("::loadPackageSnippets(callback)", () => {
     const jsPackage = () => {
-      const pack = atom.packages.loadPackage("language-javascript");
-      pack.path = path.join(atom.app.getResourcePath(), "node_modules", "language-javascript");
+      const pack = lumine.packages.loadPackage("language-javascript");
+      pack.path = path.join(lumine.app.getResourcePath(), "node_modules", "language-javascript");
       return pack;
     };
 
     beforeEach(() => {
       // simulate a list of packages where the javascript core package is returned at the end
-      atom.packages.getLoadedPackages.andReturn([
-        atom.packages.loadPackage(path.join(__dirname, "fixtures", "package-with-snippets")),
+      lumine.packages.getLoadedPackages.andReturn([
+        lumine.packages.loadPackage(path.join(__dirname, "fixtures", "package-with-snippets")),
         jsPackage(),
       ]);
     });
@@ -145,7 +145,7 @@ describe("Snippet Loading", () => {
     // with `LUMINE_RESOURCE_PATH`. Just make sure it passes in CI and you'll
     // be fine.
     it("allows other packages to override core packages' snippets", () => {
-      waitsForPromise(() => atom.packages.activatePackage("language-javascript"));
+      waitsForPromise(() => lumine.packages.activatePackage("language-javascript"));
 
       activateSnippetsPackage();
 
@@ -161,7 +161,7 @@ describe("Snippet Loading", () => {
       let loadedCallback = null;
 
       waitsFor("package to activate", (done) =>
-        atom.packages.activatePackage("snippets").then(({ mainModule }) => {
+        lumine.packages.activatePackage("snippets").then(({ mainModule }) => {
           mainModule.onDidLoadSnippets(
             (loadedCallback = jasmine.createSpy("onDidLoadSnippets callback")),
           );
@@ -173,7 +173,7 @@ describe("Snippet Loading", () => {
     });
   });
 
-  describe("when ~/.atom/snippets.json exists", () => {
+  describe("when ~/.lumine/snippets.json exists", () => {
     let snippet;
     beforeEach(async () => {
       jasmine.useRealClock();
@@ -239,7 +239,7 @@ describe("Snippet Loading", () => {
     });
   });
 
-  describe("when ~/.atom/snippets.cson exists", () => {
+  describe("when ~/.lumine/snippets.cson exists", () => {
     beforeEach(async () => {
       jasmine.useRealClock();
       fs.mkdirSync(configDirPath, { recursive: true });
@@ -306,55 +306,55 @@ describe("Snippet Loading", () => {
     await activateSnippetsPackagePromise();
 
     expect(console.warn).toHaveBeenCalled();
-    if (atom.notifications != null) {
-      expect(atom.notifications.addError).toHaveBeenCalled();
+    if (lumine.notifications != null) {
+      expect(lumine.notifications.addError).toHaveBeenCalled();
     }
   });
 
   describe("packages-with-snippets-disabled feature", () => {
     it("disables no snippets if the config option is empty", () => {
-      const originalConfig = atom.config.get("core.packagesWithSnippetsDisabled");
-      atom.config.set("core.packagesWithSnippetsDisabled", []);
+      const originalConfig = lumine.config.get("core.packagesWithSnippetsDisabled");
+      lumine.config.set("core.packagesWithSnippetsDisabled", []);
 
       activateSnippetsPackage();
       runs(() => {
         const snippets = snippetsService.snippetsForScopes([".package-with-snippets-unique-scope"]);
         expect(Object.keys(snippets).length).toBe(1);
-        atom.config.set("core.packagesWithSnippetsDisabled", originalConfig);
+        lumine.config.set("core.packagesWithSnippetsDisabled", originalConfig);
       });
     });
 
     it("still includes a disabled package's snippets in the list of unparsed snippets", () => {
-      let originalConfig = atom.config.get("core.packagesWithSnippetsDisabled");
-      atom.config.set("core.packagesWithSnippetsDisabled", []);
+      let originalConfig = lumine.config.get("core.packagesWithSnippetsDisabled");
+      lumine.config.set("core.packagesWithSnippetsDisabled", []);
 
       activateSnippetsPackage();
       runs(() => {
-        atom.config.set("core.packagesWithSnippetsDisabled", ["package-with-snippets"]);
+        lumine.config.set("core.packagesWithSnippetsDisabled", ["package-with-snippets"]);
         const allSnippets = snippetsService.getUnparsedSnippets();
         const scopedSnippet = allSnippets.find(
           (s) => s.selectorString === ".package-with-snippets-unique-scope",
         );
         expect(scopedSnippet).not.toBe(undefined);
-        atom.config.set("core.packagesWithSnippetsDisabled", originalConfig);
+        lumine.config.set("core.packagesWithSnippetsDisabled", originalConfig);
       });
     });
 
     it("never loads a package's snippets when that package is disabled in config", () => {
-      const originalConfig = atom.config.get("core.packagesWithSnippetsDisabled");
-      atom.config.set("core.packagesWithSnippetsDisabled", ["package-with-snippets"]);
+      const originalConfig = lumine.config.get("core.packagesWithSnippetsDisabled");
+      lumine.config.set("core.packagesWithSnippetsDisabled", ["package-with-snippets"]);
 
       activateSnippetsPackage();
       runs(() => {
         const snippets = snippetsService.snippetsForScopes([".package-with-snippets-unique-scope"]);
         expect(Object.keys(snippets).length).toBe(0);
-        atom.config.set("core.packagesWithSnippetsDisabled", originalConfig);
+        lumine.config.set("core.packagesWithSnippetsDisabled", originalConfig);
       });
     });
 
     it("unloads and/or reloads snippets from a package if the config option is changed after activation", () => {
-      const originalConfig = atom.config.get("core.packagesWithSnippetsDisabled");
-      atom.config.set("core.packagesWithSnippetsDisabled", []);
+      const originalConfig = lumine.config.get("core.packagesWithSnippetsDisabled");
+      lumine.config.set("core.packagesWithSnippetsDisabled", []);
 
       activateSnippetsPackage();
       runs(() => {
@@ -362,16 +362,16 @@ describe("Snippet Loading", () => {
         expect(Object.keys(snippets).length).toBe(1);
 
         // Disable it.
-        atom.config.set("core.packagesWithSnippetsDisabled", ["package-with-snippets"]);
+        lumine.config.set("core.packagesWithSnippetsDisabled", ["package-with-snippets"]);
         snippets = snippetsService.snippetsForScopes([".package-with-snippets-unique-scope"]);
         expect(Object.keys(snippets).length).toBe(0);
 
         // Re-enable it.
-        atom.config.set("core.packagesWithSnippetsDisabled", []);
+        lumine.config.set("core.packagesWithSnippetsDisabled", []);
         snippets = snippetsService.snippetsForScopes([".package-with-snippets-unique-scope"]);
         expect(Object.keys(snippets).length).toBe(1);
 
-        atom.config.set("core.packagesWithSnippetsDisabled", originalConfig);
+        lumine.config.set("core.packagesWithSnippetsDisabled", originalConfig);
       });
     });
   });

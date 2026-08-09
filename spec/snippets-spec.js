@@ -1,7 +1,7 @@
 const path = require("path");
 const temp = require("@lumine-code/temp").track();
 const Snippets = require("../lib/snippets");
-const { TextEditor } = require("atom");
+const { TextEditor } = require("lumine");
 const crypto = require("crypto");
 
 const SUPPORTS_UUID = "randomUUID" in crypto && typeof crypto.randomUUID === "function";
@@ -14,28 +14,28 @@ describe("Snippets extension", () => {
       param = {};
     }
     const { shift } = param;
-    const event = atom.keymaps.constructor.buildKeydownEvent("tab", {
+    const event = lumine.keymaps.constructor.buildKeydownEvent("tab", {
       shift,
       target: editorElement,
     });
-    atom.keymaps.handleKeyboardEvent(event);
+    lumine.keymaps.handleKeyboardEvent(event);
   };
 
   beforeEach(async () => {
-    if (atom.notifications != null) {
-      spyOn(atom.notifications, "addError");
+    if (lumine.notifications != null) {
+      spyOn(lumine.notifications, "addError");
     }
     spyOn(Snippets, "loadAll");
     spyOn(Snippets, "getUserSnippetsPath").andReturn("");
 
-    await atom.workspace.open(path.join(__dirname, "fixtures", "sample.js"));
-    await atom.packages.activatePackage("language-javascript");
-    await atom.packages.activatePackage("language-python");
-    await atom.packages.activatePackage("language-html");
-    await atom.packages.activatePackage("snippets");
+    await lumine.workspace.open(path.join(__dirname, "fixtures", "sample.js"));
+    await lumine.packages.activatePackage("language-javascript");
+    await lumine.packages.activatePackage("language-python");
+    await lumine.packages.activatePackage("language-html");
+    await lumine.packages.activatePackage("snippets");
 
-    editor = atom.workspace.getActiveTextEditor();
-    editorElement = atom.views.getView(editor);
+    editor = lumine.workspace.getActiveTextEditor();
+    editorElement = lumine.views.getView(editor);
     languageMode = editor.getBuffer().getLanguageMode();
     await languageMode.ready;
   });
@@ -45,7 +45,7 @@ describe("Snippets extension", () => {
       await languageMode.atTransactionEnd();
     }
     editor.destroy();
-    await atom.packages.deactivatePackage("snippets");
+    await lumine.packages.deactivatePackage("snippets");
   });
 
   describe("provideSnippets interface", () => {
@@ -67,8 +67,8 @@ describe("Snippets extension", () => {
         Snippets.doneLoading();
         expect(snippetsInterface.bundledSnippetsLoaded()).toBe(true);
 
-        await atom.packages.deactivatePackage("snippets");
-        await atom.packages.activatePackage("snippets");
+        await lumine.packages.deactivatePackage("snippets");
+        await lumine.packages.activatePackage("snippets");
 
         runs(() => {
           expect(snippetsInterface.bundledSnippetsLoaded()).toBe(false);
@@ -111,12 +111,12 @@ describe("Snippets extension", () => {
   });
 
   it("returns false for snippetToExpandUnderCursor if getSnippets returns {}", () => {
-    const snippets = atom.packages.getActivePackage("snippets").mainModule;
+    const snippets = lumine.packages.getActivePackage("snippets").mainModule;
     expect(snippets.snippetToExpandUnderCursor(editor)).toEqual(false);
   });
 
   it("ignores invalid snippets in the config", () => {
-    const snippets = atom.packages.getActivePackage("snippets").mainModule;
+    const snippets = lumine.packages.getActivePackage("snippets").mainModule;
 
     let invalidSnippets = null;
     spyOn(snippets.selectorStore, "getPropertyValue").andCallFake(() => invalidSnippets);
@@ -472,12 +472,12 @@ third tabstop $3\
       it("does not register the snippet", () => {
         editor.setText("");
         editor.insertText("bad1");
-        atom.commands.dispatch(editorElement, "snippets:expand");
+        lumine.commands.dispatch(editorElement, "snippets:expand");
         expect(editor.getText()).toBe("bad1");
 
         editor.setText("");
         editor.setText("bad2");
-        atom.commands.dispatch(editorElement, "snippets:expand");
+        lumine.commands.dispatch(editorElement, "snippets:expand");
         expect(editor.getText()).toBe("bad2");
       });
     });
@@ -566,7 +566,7 @@ third tabstop $3\
           it("destroys the inner tab stop if the outer tab stop is modified", () => {
             editor.setText("");
             editor.insertText("t5");
-            atom.commands.dispatch(editorElement, "snippets:expand");
+            lumine.commands.dispatch(editorElement, "snippets:expand");
             expect(editor.lineTextForBufferRow(0)).toBe('"key": value');
             expect(editor.getSelectedBufferRange()).toEqual([
               [0, 0],
@@ -600,8 +600,8 @@ third tabstop $3\
           it("correctly places the tab stops (regression)", () => {
             editor.setText("");
             editor.insertText("t7");
-            atom.commands.dispatch(editorElement, "snippets:expand");
-            atom.commands.dispatch(editorElement, "snippets:next-tab-stop");
+            lumine.commands.dispatch(editorElement, "snippets:expand");
+            lumine.commands.dispatch(editorElement, "snippets:next-tab-stop");
             expect(editor.getCursorBufferPosition()).toEqual([3, 25]);
           });
         });
@@ -715,7 +715,7 @@ third tabstop $3\
           it("does not indent the next line", () => {
             editor.setCursorScreenPosition([2, Infinity]);
             editor.insertText(" t1");
-            atom.commands.dispatch(editorElement, "snippets:expand");
+            lumine.commands.dispatch(editorElement, "snippets:expand");
             expect(editor.lineTextForBufferRow(3)).toBe(
               "    var pivot = items.shift(), current, left = [], right = [];",
             );
@@ -727,7 +727,7 @@ third tabstop $3\
             expect(editor.getSoftTabs()).toBeTruthy();
             editor.setCursorScreenPosition([2, Infinity]);
             editor.insertText(" t3");
-            atom.commands.dispatch(editorElement, "snippets:expand");
+            lumine.commands.dispatch(editorElement, "snippets:expand");
             expect(editor.lineTextForBufferRow(2)).toBe(
               "    if (items.length <= 1) return items; line 1",
             );
@@ -749,9 +749,9 @@ third tabstop $3\
           expect(editor.getSoftTabs()).toBeTruthy();
           editor.setCursorScreenPosition([2, Infinity]);
           editor.insertText(" t3");
-          atom.commands.dispatch(editorElement, "snippets:expand");
+          lumine.commands.dispatch(editorElement, "snippets:expand");
           expect(editor.getCursorBufferPosition()).toEqual([3, 12]);
-          atom.commands.dispatch(editorElement, "snippets:next-tab-stop");
+          lumine.commands.dispatch(editorElement, "snippets:next-tab-stop");
           expect(editor.getCursorBufferPosition()).toEqual([4, 4]);
         });
 
@@ -761,7 +761,7 @@ third tabstop $3\
           await languageMode.atTransactionEnd();
           editor.insertText("t4b");
           await languageMode.atTransactionEnd();
-          atom.commands.dispatch(editorElement, "snippets:expand");
+          lumine.commands.dispatch(editorElement, "snippets:expand");
 
           expect(editor.lineTextForBufferRow(3)).toBe("     = line 1 {"); // 4 + 1 spaces (because the tab stop is invisible)
           expect(editor.lineTextForBufferRow(4)).toBe("      line 2");
@@ -775,13 +775,13 @@ third tabstop $3\
           await languageMode.atTransactionEnd();
           editor.insertText("t4");
           await languageMode.atTransactionEnd();
-          atom.commands.dispatch(editorElement, "snippets:expand");
+          lumine.commands.dispatch(editorElement, "snippets:expand");
 
           expect(editor.getSelectedBufferRange()).toEqual([
             [3, 9],
             [3, 10],
           ]);
-          atom.commands.dispatch(editorElement, "snippets:next-tab-stop");
+          lumine.commands.dispatch(editorElement, "snippets:next-tab-stop");
           expect(editor.getSelectedBufferRange()).toEqual([
             [4, 6],
             [4, 13],
@@ -789,13 +789,13 @@ third tabstop $3\
 
           editor.insertText("t4");
           await languageMode.atTransactionEnd();
-          atom.commands.dispatch(editorElement, "snippets:expand");
+          lumine.commands.dispatch(editorElement, "snippets:expand");
 
           expect(editor.getSelectedBufferRange()).toEqual([
             [4, 11],
             [4, 12],
           ]);
-          atom.commands.dispatch(editorElement, "snippets:next-tab-stop");
+          lumine.commands.dispatch(editorElement, "snippets:next-tab-stop");
           expect(editor.getSelectedBufferRange()).toEqual([
             [5, 8],
             [5, 15],
@@ -805,13 +805,13 @@ third tabstop $3\
           await languageMode.atTransactionEnd();
           editor.insertText("t4");
           await languageMode.atTransactionEnd();
-          atom.commands.dispatch(editorElement, "snippets:expand");
+          lumine.commands.dispatch(editorElement, "snippets:expand");
 
           expect(editor.getSelectedBufferRange()).toEqual([
             [0, 5],
             [0, 6],
           ]);
-          atom.commands.dispatch(editorElement, "snippets:next-tab-stop");
+          lumine.commands.dispatch(editorElement, "snippets:next-tab-stop");
           expect(editor.getSelectedBufferRange()).toEqual([
             [1, 2],
             [1, 9],
@@ -1175,7 +1175,7 @@ foo\
 
       describe("and the document is HTML", () => {
         beforeEach(() => {
-          atom.grammars.assignLanguageMode(editor, "text.html.basic");
+          lumine.grammars.assignLanguageMode(editor, "text.html.basic");
           editor.setText("");
         });
 
@@ -1191,7 +1191,7 @@ foo\
 
       describe("and the document is Python", () => {
         beforeEach(() => {
-          atom.grammars.assignLanguageMode(editor, "source.python");
+          lumine.grammars.assignLanguageMode(editor, "source.python");
           editor.setText("");
         });
         it("uses the right delimiters", () => {
@@ -1235,7 +1235,7 @@ foo\
       };
       for (let [flag, expected] of Object.entries(expectations)) {
         it(`should transform ${flag} correctly`, () => {
-          atom.clipboard.write("lorem Ipsum Dolor");
+          lumine.clipboard.write("lorem Ipsum Dolor");
           let trigger = `v_simple_${flag}`;
           editor.setText(trigger);
           editor.setCursorScreenPosition([0, trigger.length]);
@@ -1650,7 +1650,7 @@ foo\
     describe("when the editor is not a pane item (regression)", () => {
       it("handles tab stops correctly", async () => {
         editor = new TextEditor();
-        atom.grammars.assignLanguageMode(editor, "source.js");
+        lumine.grammars.assignLanguageMode(editor, "source.js");
         let languageMode = editor.getBuffer().getLanguageMode();
         editorElement = editor.getElement();
         await languageMode.ready;
@@ -1676,15 +1676,15 @@ foo\
   describe("when lumine://.lumine/snippets is opened", () => {
     it("opens ~/.lumine/snippets.json", () => {
       jasmine.unspy(Snippets, "getUserSnippetsPath");
-      atom.workspace.destroyActivePaneItem();
-      const configDirPath = temp.mkdirSync("atom-config-dir-");
-      spyOn(atom, "getConfigDirPath").andReturn(configDirPath);
-      atom.workspace.open("lumine://.lumine/snippets");
+      lumine.workspace.destroyActivePaneItem();
+      const configDirPath = temp.mkdirSync("lumine-config-dir-");
+      spyOn(lumine, "getConfigDirPath").andReturn(configDirPath);
+      lumine.workspace.open("lumine://.lumine/snippets");
 
-      waitsFor(() => atom.workspace.getActiveTextEditor() != null);
+      waitsFor(() => lumine.workspace.getActiveTextEditor() != null);
 
       runs(() => {
-        expect(atom.workspace.getActiveTextEditor().getURI()).toBe(
+        expect(lumine.workspace.getActiveTextEditor().getURI()).toBe(
           path.join(configDirPath, "snippets.json"),
         );
       });
@@ -1759,12 +1759,12 @@ foo\
     });
 
     it("registers the command", () => {
-      expect("snippets:some-command-snippet" in atom.commands.registeredCommands).toBe(true);
+      expect("snippets:some-command-snippet" in lumine.commands.registeredCommands).toBe(true);
     });
 
     it("complains about a malformed command name", () => {
       const expectedMessage = `Cannot register \`i flout the RULES\` for snippet “another snippet with a malformed command name” because the command name isn’t valid. Command names must be all lowercase and use hyphens between words instead of spaces.`;
-      expect(atom.notifications.addError).toHaveBeenCalledWith(`Snippets error`, {
+      expect(lumine.notifications.addError).toHaveBeenCalledWith(`Snippets error`, {
         description: expectedMessage,
         dismissable: true,
       });
@@ -1776,7 +1776,7 @@ foo\
       });
 
       it("expands the snippet when the scope matches", () => {
-        atom.commands.dispatch(editor.element, "snippets:some-command-snippet");
+        lumine.commands.dispatch(editor.element, "snippets:some-command-snippet");
         let cursor = editor.getLastCursor();
         cursor.getBufferPosition();
         expect(cursor.getBufferPosition()).toEqual([0, 18]);
@@ -1793,7 +1793,7 @@ foo\
       });
 
       it("expands the snippet even when a prefix is defined", () => {
-        atom.commands.dispatch(editor.element, "snippets:command-with-prefix");
+        lumine.commands.dispatch(editor.element, "snippets:command-with-prefix");
         let cursor = editor.getLastCursor();
         let pos = cursor.getBufferPosition();
         expect(pos.toArray().join(",")).toBe("0,9");
@@ -1801,26 +1801,26 @@ foo\
       });
 
       it("does nothing when the scope does not match", () => {
-        atom.commands.dispatch(editor.element, "snippets:some-python-command-snippet");
+        lumine.commands.dispatch(editor.element, "snippets:some-python-command-snippet");
         expect(editor.getText()).toBe("");
       });
 
       it("uses language-specific comment delimiters", () => {
         editor.setText("something");
         editor.selectAll();
-        atom.commands.dispatch(editor.element, "snippets:wrap-in-block-comment");
+        lumine.commands.dispatch(editor.element, "snippets:wrap-in-block-comment");
         expect(editor.getText()).toBe("/* something */");
       });
     });
 
     describe("and the command is invoked in an HTML document", () => {
       beforeEach(() => {
-        atom.grammars.assignLanguageMode(editor, "text.html.basic");
+        lumine.grammars.assignLanguageMode(editor, "text.html.basic");
         editor.setText("");
       });
 
       it("expands tab stops correctly", () => {
-        atom.commands.dispatch(editor.element, "snippets:wrap-in-html-tag");
+        lumine.commands.dispatch(editor.element, "snippets:wrap-in-html-tag");
         let cursor = editor.getLastCursor();
         expect(cursor.getBufferPosition()).toEqual([0, 4]);
         expect(editor.getSelectedText()).toEqual("div");
@@ -1836,21 +1836,21 @@ foo\
       it("uses language-specific comment delimiters", () => {
         editor.setText("something");
         editor.selectAll();
-        atom.commands.dispatch(editor.element, "snippets:wrap-in-block-comment");
+        lumine.commands.dispatch(editor.element, "snippets:wrap-in-block-comment");
         expect(editor.getText()).toBe("<!-- something -->");
       });
     });
 
     describe("and the command is invoked in a Python document", () => {
       beforeEach(() => {
-        atom.grammars.assignLanguageMode(editor, "source.python");
+        lumine.grammars.assignLanguageMode(editor, "source.python");
         editor.setText("");
       });
 
       it("uses language-specific comment delimiters, or empty strings if those delimiters don't exist in Python", () => {
         editor.setText("something");
         editor.selectAll();
-        atom.commands.dispatch(editor.element, "snippets:wrap-in-block-comment");
+        lumine.commands.dispatch(editor.element, "snippets:wrap-in-block-comment");
         expect(editor.getText()).toBe(" something ");
       });
     });
@@ -1858,7 +1858,7 @@ foo\
 
   describe("when a snippet contains variables", () => {
     beforeEach(() => {
-      atom.grammars.assignLanguageMode(editor, "source.js");
+      lumine.grammars.assignLanguageMode(editor, "source.js");
       Snippets.add(
         __filename,
         {
@@ -1927,7 +1927,7 @@ foo\
       editor.selectToBeginningOfLine();
 
       expect(editor.getSelectedText()).toBe("(selected text)");
-      atom.commands.dispatch(editor.element, "test-package:test-command-tm-selected-text");
+      lumine.commands.dispatch(editor.element, "test-package:test-command-tm-selected-text");
       expect(editor.getText()).toBe("lorem ipsum (selected text) dolor sit amet");
     });
 
@@ -1968,25 +1968,25 @@ foo\
 
       let expected = `Today is ${month} ${day}, ${year}`;
 
-      atom.commands.dispatch(editor.element, "test-package:test-command-date");
+      lumine.commands.dispatch(editor.element, "test-package:test-command-date");
       expect(editor.getText()).toBe(expected);
     });
 
     it("interpolates a CLIPBOARD variable into the snippet expansion", () => {
-      atom.clipboard.write("(clipboard text)");
-      atom.commands.dispatch(editor.element, "test-package:test-command-clipboard");
+      lumine.clipboard.write("(clipboard text)");
+      lumine.commands.dispatch(editor.element, "test-package:test-command-clipboard");
       expect(editor.getText()).toBe("lorem ipsum (clipboard text) dolor sit amet");
     });
 
     it("interpolates a transformed variable into the snippet expansion", () => {
-      atom.clipboard.write("(clipboard 19283 text)");
-      atom.commands.dispatch(editor.element, "test-package:test-command-clipboard-transformed");
+      lumine.clipboard.write("(clipboard 19283 text)");
+      lumine.commands.dispatch(editor.element, "test-package:test-command-clipboard-transformed");
       expect(editor.getText()).toBe("lorem ipsum (clipboard  text) dolor sit amet");
     });
 
     it("interpolates an upcased variable", () => {
-      atom.clipboard.write("(clipboard Text is Multiple words)");
-      atom.commands.dispatch(editor.element, "test-package:test-command-clipboard-upcased");
+      lumine.clipboard.write("(clipboard Text is Multiple words)");
+      lumine.commands.dispatch(editor.element, "test-package:test-command-clipboard-upcased");
       expect(editor.lineTextForBufferRow(0)).toBe(
         "lorem ipsum (CLIPBOARD TEXT IS MULTIPLE WORDS) dolor sit amet",
       );
@@ -2062,7 +2062,7 @@ foo\
 
     describe("and the command is invoked in an HTML document", () => {
       beforeEach(() => {
-        atom.grammars.assignLanguageMode(editor, "text.html.basic");
+        lumine.grammars.assignLanguageMode(editor, "text.html.basic");
         editor.setText("");
       });
 
@@ -2070,7 +2070,7 @@ foo\
         editor.insertText("lorem");
         editor.selectToBeginningOfLine();
 
-        atom.commands.dispatch(editor.element, "test-package:wrap-in-html-tag");
+        lumine.commands.dispatch(editor.element, "test-package:wrap-in-html-tag");
 
         expect(editor.getText()).toBe(`<div>lorem</div>`);
 
@@ -2088,7 +2088,7 @@ foo\
     let availableSnippetsView = null;
 
     beforeEach(() => {
-      atom.grammars.assignLanguageMode(editor, "source.js");
+      lumine.grammars.assignLanguageMode(editor, "source.js");
       Snippets.add(__filename, {
         ".source.js": {
           test: {
@@ -2105,14 +2105,14 @@ foo\
 
       delete Snippets.availableSnippetsView;
 
-      // snippets:available is registered on atom-workspace: it acts on the
+      // snippets:available is registered on lumine-workspace: it acts on the
       // active editor, so unlike expansion it need not reach a detached one.
-      atom.commands.dispatch(atom.workspace.getElement(), "snippets:available");
+      lumine.commands.dispatch(lumine.workspace.getElement(), "snippets:available");
 
-      waitsFor(() => atom.workspace.getModalPanels().length === 1);
+      waitsFor(() => lumine.workspace.getModalPanels().length === 1);
 
       runs(() => {
-        availableSnippetsView = atom.workspace.getModalPanels()[0].getItem();
+        availableSnippetsView = lumine.workspace.getModalPanels()[0].getItem();
       });
     });
 
@@ -2143,8 +2143,8 @@ foo\
     });
 
     it("closes the dialog when triggered again", () => {
-      atom.commands.dispatch(atom.workspace.getElement(), "snippets:available");
-      expect(atom.workspace.getModalPanels().filter((panel) => panel.isVisible()).length).toBe(0);
+      lumine.commands.dispatch(lumine.workspace.getElement(), "snippets:available");
+      expect(lumine.workspace.getModalPanels().filter((panel) => panel.isVisible()).length).toBe(0);
     });
   });
 });

@@ -16,11 +16,11 @@ To install `snippets` search for _snippets_ in the Install pane of the Lumine se
 
 ## Commands
 
-Commands available in `atom-workspace`:
+Commands available in `lumine-workspace`:
 
 - `snippets:available`: show the snippets available for the current editor.
 
-Commands available in `atom-text-editor`:
+Commands available in `lumine-text-editor`:
 
 - `snippets:expand`: expand the snippet under the cursor,
 - `snippets:next-tab-stop`: move to the next tab stop,

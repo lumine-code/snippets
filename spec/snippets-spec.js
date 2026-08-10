@@ -26,7 +26,7 @@ describe("Snippets extension", () => {
       spyOn(lumine.notifications, "addError");
     }
     spyOn(Snippets, "loadAll");
-    spyOn(Snippets, "getUserSnippetsPath").andReturn("");
+    spyOn(Snippets, "getUserSnippetsPath").and.returnValue("");
 
     await lumine.workspace.open(path.join(__dirname, "fixtures", "sample.js"));
     await lumine.packages.activatePackage("language-javascript");
@@ -70,11 +70,9 @@ describe("Snippets extension", () => {
         await lumine.packages.deactivatePackage("snippets");
         await lumine.packages.activatePackage("snippets");
 
-        runs(() => {
-          expect(snippetsInterface.bundledSnippetsLoaded()).toBe(false);
-          Snippets.doneLoading();
-          expect(snippetsInterface.bundledSnippetsLoaded()).toBe(true);
-        });
+        expect(snippetsInterface.bundledSnippetsLoaded()).toBe(false);
+        Snippets.doneLoading();
+        expect(snippetsInterface.bundledSnippetsLoaded()).toBe(true);
       });
     });
 
@@ -119,7 +117,7 @@ describe("Snippets extension", () => {
     const snippets = lumine.packages.getActivePackage("snippets").mainModule;
 
     let invalidSnippets = null;
-    spyOn(snippets.selectorStore, "getPropertyValue").andCallFake(() => invalidSnippets);
+    spyOn(snippets.selectorStore, "getPropertyValue").and.callFake(() => invalidSnippets);
     expect(snippets.getSnippets(editor)).toEqual({});
 
     invalidSnippets = "test";
@@ -429,7 +427,7 @@ third tabstop $3\
     });
 
     it("parses snippets once, reusing cached ones on subsequent queries", () => {
-      spyOn(Snippets, "getBodyParser").andCallThrough();
+      spyOn(Snippets, "getBodyParser").and.callThrough();
 
       editor.insertText("t1");
       simulateTabKeyEvent();
@@ -1674,20 +1672,18 @@ foo\
   });
 
   describe("when lumine://.lumine/snippets is opened", () => {
-    it("opens ~/.lumine/snippets.json", () => {
+    it("opens ~/.lumine/snippets.json", async () => {
       jasmine.unspy(Snippets, "getUserSnippetsPath");
       lumine.workspace.destroyActivePaneItem();
       const configDirPath = temp.mkdirSync("lumine-config-dir-");
-      spyOn(lumine, "getConfigDirPath").andReturn(configDirPath);
+      spyOn(lumine, "getConfigDirPath").and.returnValue(configDirPath);
       lumine.workspace.open("lumine://.lumine/snippets");
 
-      waitsFor(() => lumine.workspace.getActiveTextEditor() != null);
+      await conditionPromise(() => lumine.workspace.getActiveTextEditor() != null);
 
-      runs(() => {
-        expect(lumine.workspace.getActiveTextEditor().getURI()).toBe(
-          path.join(configDirPath, "snippets.json"),
-        );
-      });
+      expect(lumine.workspace.getActiveTextEditor().getURI()).toBe(
+        path.join(configDirPath, "snippets.json"),
+      );
     });
   });
 
@@ -2087,7 +2083,7 @@ foo\
   describe("when the 'snippets:available' command is triggered", () => {
     let availableSnippetsView = null;
 
-    beforeEach(() => {
+    beforeEach(async () => {
       lumine.grammars.assignLanguageMode(editor, "source.js");
       Snippets.add(__filename, {
         ".source.js": {
@@ -2109,11 +2105,9 @@ foo\
       // active editor, so unlike expansion it need not reach a detached one.
       lumine.commands.dispatch(lumine.workspace.getElement(), "snippets:available");
 
-      waitsFor(() => lumine.workspace.getModalPanels().length === 1);
+      await conditionPromise(() => lumine.workspace.getModalPanels().length === 1);
 
-      runs(() => {
-        availableSnippetsView = lumine.workspace.getModalPanels()[0].getItem();
-      });
+      availableSnippetsView = lumine.workspace.getModalPanels()[0].getItem();
     });
 
     it("renders a select list of all available snippets", () => {

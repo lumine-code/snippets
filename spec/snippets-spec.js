@@ -436,7 +436,7 @@ third tabstop $3\
       expect(editor.lineTextForBufferRow(0)).toBe("this is a testvar quicksort = function () {");
       expect(editor.getCursorScreenPosition()).toEqual([0, 14]);
 
-      Snippets.getBodyParser.reset();
+      Snippets.getBodyParser.calls.reset();
 
       editor.setText("");
       editor.insertText("t1");
@@ -446,7 +446,7 @@ third tabstop $3\
       expect(editor.lineTextForBufferRow(0)).toBe("this is a test");
       expect(editor.getCursorScreenPosition()).toEqual([0, 14]);
 
-      Snippets.getBodyParser.reset();
+      Snippets.getBodyParser.calls.reset();
 
       Snippets.add(__filename, {
         ".source.js": {

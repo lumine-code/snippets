@@ -12,7 +12,7 @@ Expand snippets matching the current prefix with the tab key.
 
 ## Installation
 
-To install `snippets` search for _snippets_ in the Install pane of the Lumine settings or run `lumine --install lumine-code/snippets`.
+To install `snippets` search for it in the Install pane of the Lumine settings, or run the command `lumine --install lumine-code/snippets`.
 
 ## Commands
 
@@ -45,7 +45,7 @@ Snippet files live in a package's `snippets/` folder and in your user `snippets.
 
 ## Services
 
-- **[snippets](docs/snippets.md)** (`1.0.0`): provided to expose the loaded snippets so other packages can query and expand them.
+- [`snippets`](docs/snippets.md): provided to expose the loaded snippets so other packages can query and expand them.
 
 ## Contributing
 

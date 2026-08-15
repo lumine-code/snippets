@@ -111,7 +111,11 @@ describe("Snippet Loading", () => {
   describe("::loadPackageSnippets(callback)", () => {
     const jsPackage = () => {
       const pack = lumine.packages.loadPackage("language-javascript");
-      pack.path = path.join(lumine.application.getResourcePath(), "node_modules", "language-javascript");
+      pack.path = path.join(
+        lumine.application.getResourcePath(),
+        "node_modules",
+        "language-javascript",
+      );
       return pack;
     };
 

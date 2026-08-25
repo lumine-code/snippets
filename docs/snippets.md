@@ -38,7 +38,7 @@ type Snippets = {
     editor: TextEditor,
     cursor?: Cursor,
     options?: { method?: string },
-  ): SnippetExpansion;
+  ): Promise<SnippetExpansion>;
 };
 ```
 
@@ -48,7 +48,7 @@ type Snippets = {
 | `snippetsForScopes(scopeDescriptor)`  | The snippets applying to a scope, keyed by prefix, with the body already parsed.               |
 | `getUnparsedSnippets()`               | Every snippet as loaded from disk, before parsing. For listing and editing, not for expansion. |
 | `getUserSnippetsPath()`               | The path of the user's own snippets file.                                                      |
-| `insertSnippet(body, editor, cursor)` | Expands a snippet body at the cursor and returns the live expansion.                           |
+| `insertSnippet(body, editor, cursor)` | Expands a snippet body at the cursor and resolves to the live expansion.                       |
 
 `insertSnippet` also accepts a fourth `{ method }` argument, which records how the expansion was triggered. Leave it out unless you are reproducing one of the package's own commands.
 
@@ -84,7 +84,7 @@ module.exports = {
 
 `snippetsForScopes` resolves the whole scope chain, so a snippet declared for `.source.js` is returned for a position inside `.source.js .string` too. The keys are prefixes and later sources override earlier ones under the same prefix, with the user's file winning.
 
-`insertSnippet` performs a real expansion with tab stops and mirrors — it is not a text insertion. The returned expansion stays live until the user tabs out of it or the buffer change invalidates it.
+`insertSnippet` performs a real expansion with tab stops and mirrors — it is not a text insertion. It returns a Promise because resolving `$CLIPBOARD` crosses to Electron's main process; the resolved expansion stays live until the user tabs out of it or the buffer change invalidates it.
 
 `getUnparsedSnippets` returns the raw records including their source paths, which is what a settings UI needs and what an expansion path should not use.
 

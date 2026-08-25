@@ -105,6 +105,15 @@ describe("Snippets extension", () => {
         expect(editor.lineTextForBufferRow(1)).toBe("second");
         expect(editor.lineTextForBufferRow(2)).toBe("third");
       });
+
+      it("awaits the clipboard when resolving a CLIPBOARD variable", async () => {
+        spyOn(lumine.clipboard, "read").and.returnValue(Promise.resolve("async clipboard"));
+        editor.setText("");
+
+        await snippetsInterface.insertSnippet("value: $CLIPBOARD", editor);
+
+        expect(editor.getText()).toBe("value: async clipboard");
+      });
     });
   });
 

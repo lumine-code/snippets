@@ -46,8 +46,8 @@
   },
   "dependencies": {
     "@lumine-code/season": "github:lumine-code/season#b9d78e669eff982a40e0e71a9b6ccbcc8c2d9519",
-    "@lumine-code/selector-store": "github:lumine-code/selector-store#782d1439065a1c885424682c079dfacf65ed51d5",
-    "@lumine-code/underscore-plus": "github:lumine-code/underscore-plus#3dcac0046d9ff5a3b42f3d83b997112ab38cd705",
+    "@lumine-code/selector-store": "github:lumine-code/selector-store#77fddcf318f0bbcc4cfeb06ff40e10672ebe3ca1",
+    "@lumine-code/underscore-plus": "github:lumine-code/underscore-plus#7abe38681700c81e6e69a53fbd2c9fd2835ff066",
     "async": "3.2.6"
   },
   "devDependencies": {

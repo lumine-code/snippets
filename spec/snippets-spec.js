@@ -2120,23 +2120,23 @@ foo\
     });
 
     it("renders a select list of all available snippets", () => {
-      expect(availableSnippetsView.selectListView.getSelectedItem().prefix).toBe("test");
-      expect(availableSnippetsView.selectListView.getSelectedItem().name).toBe("test");
-      expect(availableSnippetsView.selectListView.getSelectedItem().bodyText).toBe(
+      expect(availableSnippetsView.selectList.getSelectedItem().prefix).toBe("test");
+      expect(availableSnippetsView.selectList.getSelectedItem().name).toBe("test");
+      expect(availableSnippetsView.selectList.getSelectedItem().bodyText).toBe(
         "${1:Test pass you will}, young ",
       );
 
-      availableSnippetsView.selectListView.selectNext();
+      availableSnippetsView.selectList.selectNext();
 
-      expect(availableSnippetsView.selectListView.getSelectedItem().prefix).toBe("chal");
-      expect(availableSnippetsView.selectListView.getSelectedItem().name).toBe("challenge");
-      expect(availableSnippetsView.selectListView.getSelectedItem().bodyText).toBe(
+      expect(availableSnippetsView.selectList.getSelectedItem().prefix).toBe("chal");
+      expect(availableSnippetsView.selectList.getSelectedItem().name).toBe("challenge");
+      expect(availableSnippetsView.selectList.getSelectedItem().bodyText).toBe(
         "$1: ${2:To pass this challenge}",
       );
     });
 
     it("writes the selected snippet to the editor as snippet", async () => {
-      await availableSnippetsView.selectListView.confirmSelection();
+      await availableSnippetsView.selectList.confirmSelection();
 
       expect(editor.getCursorScreenPosition()).toEqual([0, 18]);
       expect(editor.getSelectedText()).toBe("Test pass you will");

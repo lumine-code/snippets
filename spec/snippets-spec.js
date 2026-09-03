@@ -2135,8 +2135,8 @@ foo\
       );
     });
 
-    it("writes the selected snippet to the editor as snippet", () => {
-      availableSnippetsView.selectListView.confirmSelection();
+    it("writes the selected snippet to the editor as snippet", async () => {
+      await availableSnippetsView.selectListView.confirmSelection();
 
       expect(editor.getCursorScreenPosition()).toEqual([0, 18]);
       expect(editor.getSelectedText()).toBe("Test pass you will");

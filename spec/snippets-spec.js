@@ -1,7 +1,7 @@
 const path = require("path");
 const temp = require("@lumine-code/temp").track();
 const Snippets = require("../lib/snippets");
-const { TextEditor } = require("lumine");
+const { TextEditor, Disposable } = require("lumine");
 const crypto = require("crypto");
 
 const SUPPORTS_UUID = "randomUUID" in crypto && typeof crypto.randomUUID === "function";
@@ -27,6 +27,7 @@ describe("Snippets extension", () => {
     }
     spyOn(Snippets, "loadAll");
     spyOn(Snippets, "getUserSnippetsPath").and.returnValue("");
+    spyOn(Snippets, "watchUserSnippets").and.callFake((callback) => callback(new Disposable()));
 
     await lumine.workspace.open(path.join(__dirname, "fixtures", "sample.js"));
     await lumine.packages.activatePackage("language-javascript");

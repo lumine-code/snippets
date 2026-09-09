@@ -291,6 +291,42 @@ describe("Snippet Loading", () => {
     }
   });
 
+  it("observes an absent user file and removes and restores snippets without reporting missing-file errors", async () => {
+    jasmine.useRealClock();
+    lumine.packages.getLoadedPackages.and.returnValue([]);
+    const userPath = path.join(configDirPath, "snippets.json");
+    const createWatch = lumine.fileWatchClient.watchFile.bind(lumine.fileWatchClient);
+    let watcher;
+    spyOn(lumine.fileWatchClient, "watchFile").and.callFake((filePath) => {
+      const handle = createWatch(filePath);
+      if (filePath === userPath) watcher = handle;
+      return handle;
+    });
+    await activateSnippetsPackage();
+    await watcher.ready;
+    const mainModule = lumine.packages.getActivePackage("snippets").mainModule;
+    await conditionPromise(() => !mainModule.isHandlingUserSnippetsChange);
+    expect(console.warn).not.toHaveBeenCalled();
+    expect(lumine.notifications.addError).not.toHaveBeenCalled();
+
+    const current = () => snippetsService.snippetsForScopes([".watch-spec"])["watch-spec"];
+    const write = (body) =>
+      fs.writeFileSync(
+        userPath,
+        JSON.stringify({
+          ".watch-spec": { "watched snippet": { prefix: "watch-spec", body } },
+        }),
+      );
+    write("first");
+    await conditionPromise(() => current()?.body === "first");
+    fs.unlinkSync(userPath);
+    await conditionPromise(() => !current());
+    write("recreated");
+    await conditionPromise(() => current()?.body === "recreated");
+    expect(console.warn).not.toHaveBeenCalled();
+    expect(lumine.notifications.addError).not.toHaveBeenCalled();
+  });
+
   describe("packages-with-snippets-disabled feature", () => {
     it("disables no snippets if the config option is empty", async () => {
       const originalConfig = lumine.config.get("core.packagesWithSnippetsDisabled");

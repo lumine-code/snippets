@@ -86,7 +86,8 @@ describe("Snippet Loading", () => {
   });
 
   it("registers a command if a package snippet defines one", async () => {
-    await lumine.packages.activatePackage("snippets");
+    const pack = await lumine.packages.activatePackage("snippets");
+    await pack.mainModule.waitForSnippetsLoaded();
 
     expect("package-with-snippets:test-command-name" in lumine.commands.registeredCommands).toBe(
       true,

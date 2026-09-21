@@ -7,6 +7,7 @@ describe("Snippet Loading", () => {
   let configDirPath, snippetsService;
 
   beforeEach(async () => {
+    await lumine.packages.deactivatePackage("snippets");
     configDirPath = temp.mkdirSync("lumine-config-dir-");
     spyOn(lumine, "getConfigDirPath").and.returnValue(configDirPath);
 
@@ -29,13 +30,10 @@ describe("Snippet Loading", () => {
     await wait(50);
   });
 
-  // Activates the package and waits for both the module's own load promise and
-  // the bundled snippets to be in place.
+  // Activation readiness includes bundled, package, and user snippets.
   async function activateSnippetsPackage() {
     const { mainModule } = await lumine.packages.activatePackage("snippets");
     snippetsService = mainModule.provideSnippets();
-    mainModule.loaded = false;
-    await mainModule.waitForSnippetsLoaded();
 
     await conditionPromise(
       () => snippetsService.bundledSnippetsLoaded(),
@@ -88,10 +86,7 @@ describe("Snippet Loading", () => {
   });
 
   it("registers a command if a package snippet defines one", async () => {
-    const { mainModule } = await lumine.packages.activatePackage("snippets");
-    await new Promise((resolve) => {
-      mainModule.onDidLoadSnippets(resolve);
-    });
+    await lumine.packages.activatePackage("snippets");
 
     expect("package-with-snippets:test-command-name" in lumine.commands.registeredCommands).toBe(
       true,
@@ -141,15 +136,16 @@ describe("Snippet Loading", () => {
   });
 
   describe("::onDidLoadSnippets(callback)", () => {
-    it("invokes listeners when all snippets are loaded", async () => {
+    it("returns a disposable and invokes listeners for a subsequent completed load", async () => {
       const { mainModule } = await lumine.packages.activatePackage("snippets");
       const loadedCallback = jasmine.createSpy("onDidLoadSnippets callback");
-      mainModule.onDidLoadSnippets(loadedCallback);
+      const subscription = mainModule.onDidLoadSnippets(loadedCallback);
 
-      await conditionPromise(
-        () => loadedCallback.calls.count() > 0,
-        "the onDidLoad callback to be called",
-      );
+      mainModule.doneLoading();
+      expect(loadedCallback).toHaveBeenCalledTimes(1);
+      subscription.dispose();
+      mainModule.doneLoading();
+      expect(loadedCallback).toHaveBeenCalledTimes(1);
     });
   });
 

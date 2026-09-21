@@ -1,13 +1,12 @@
 const path = require("path");
 const temp = require("@lumine-code/temp").track();
-const Snippets = require("../lib/snippets");
 const { TextEditor, Disposable } = require("lumine");
 const crypto = require("crypto");
 
 const SUPPORTS_UUID = "randomUUID" in crypto && typeof crypto.randomUUID === "function";
 
 describe("Snippets extension", () => {
-  let editorElement, editor, languageMode;
+  let editorElement, editor, languageMode, Snippets;
 
   const simulateTabKeyEvent = (param) => {
     if (param == null) {
@@ -22,6 +21,8 @@ describe("Snippets extension", () => {
   };
 
   beforeEach(async () => {
+    await lumine.packages.deactivatePackage("snippets");
+    Snippets = require("../lib/snippets");
     if (lumine.notifications != null) {
       spyOn(lumine.notifications, "addError");
     }
@@ -67,7 +68,6 @@ describe("Snippets extension", () => {
         expect(snippetsInterface.bundledSnippetsLoaded()).toBe(false);
         Snippets.doneLoading();
         expect(snippetsInterface.bundledSnippetsLoaded()).toBe(true);
-
         await lumine.packages.deactivatePackage("snippets");
         await lumine.packages.activatePackage("snippets");
 

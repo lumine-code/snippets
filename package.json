@@ -26,9 +26,6 @@
   "engines": {
     "lumine": "^1.0.0"
   },
-  "backgroundTips": [
-    "You can expand a snippet by typing its prefix and pressing {{ 'snippets:expand' | keystroke }}"
-  ],
   "scripts": {
     "test": "lumine --test spec",
     "lint": "eslint . --max-warnings 0",
@@ -41,6 +38,11 @@
       "description": "Snippets are text shortcuts that can be expanded to their definition.",
       "versions": {
         "1.0.0": "provideSnippets"
+      }
+    },
+    "background-tips.provider": {
+      "versions": {
+        "1.0.0": "provideBackgroundTips"
       }
     }
   },

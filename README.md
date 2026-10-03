@@ -5,6 +5,7 @@ Expand snippets matching the current prefix with the tab key.
 ## Features
 
 - **Prefix expansion**: type a prefix and press tab to expand it into its full body.
+- **Autocomplete suggestions**: offer matching snippets in the autocomplete list and expand the selected one.
 - **Tab stops**: cycle through placeholders in the expanded snippet.
 - **Command triggers**: invoke snippets by command name in addition to prefixes.
 - **Variables and transforms**: use LSP and VSCode-style variables with case and sed-style transformations.
@@ -45,7 +46,9 @@ Snippet files live in a package's `snippets/` folder and in your user `snippets.
 
 ## Services
 
+- `autocomplete.provider`: provided to supply snippet suggestions to autocomplete.
 - [`snippets`](docs/snippets.md): provided to expose the loaded snippets so other packages can query and expand them.
+- `background-tips.provider`: provided to explain snippet expansion in the empty workspace.
 
 ## Contributing
 

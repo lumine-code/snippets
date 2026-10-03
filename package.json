@@ -26,6 +26,17 @@
   "engines": {
     "lumine": "^1.0.0"
   },
+  "specPackages": [
+    "autocomplete"
+  ],
+  "configSchema": {
+    "enableAutocomplete": {
+      "title": "Autocomplete Suggestions",
+      "description": "Offer snippets in the autocomplete list while keeping prefix expansion available independently.",
+      "type": "boolean",
+      "default": true
+    }
+  },
   "scripts": {
     "test": "lumine --test spec",
     "lint": "eslint . --max-warnings 0",
@@ -34,6 +45,11 @@
     "parse": "peggy -o ./lib/snippet-body.js ./lib/snippet-body.pegjs"
   },
   "providedServices": {
+    "autocomplete.provider": {
+      "versions": {
+        "1.0.0": "provideAutocomplete"
+      }
+    },
     "snippets": {
       "description": "Snippets are text shortcuts that can be expanded to their definition.",
       "versions": {

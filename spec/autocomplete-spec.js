@@ -26,6 +26,7 @@ describe("Snippet autocomplete", () => {
   };
 
   beforeEach(async () => {
+    jasmine.useRealClock();
     await lumine.packages.deactivatePackage("snippets");
     lumine.config.set("snippets.enableAutocomplete", true);
     lumine.config.set("autocomplete.enableBuiltinProvider", false);
@@ -47,6 +48,9 @@ describe("Snippet autocomplete", () => {
     provider = snippets.provideAutocomplete();
     autocomplete = (await lumine.packages.activatePackage("autocomplete")).mainModule;
     editorElement.focus();
+    await waitForFrames(() => autocomplete.autocompleteManager.editor === editor, {
+      description: "autocomplete to observe the focused editor",
+    });
   });
 
   afterEach(async () => {
@@ -91,12 +95,9 @@ describe("Snippet autocomplete", () => {
       true,
     );
     for (const character of "zzdo") editor.insertText(character);
-    advanceClock(200);
-    await conditionPromise(
-      () => editorElement.querySelector(".autocomplete span.word"),
-      "snippet suggestion to appear",
-      3000,
-    );
+    await waitForFrames(() => editorElement.querySelector(".autocomplete span.word"), {
+      description: "snippet suggestion to appear",
+    });
     expect(editorElement.querySelector(".autocomplete span.word")).toHaveText("zzdo");
     expect(editorElement.querySelector(".autocomplete span.right-label")).toHaveText("Loop");
 

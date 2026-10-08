@@ -46,6 +46,8 @@ Snippet files live in a package's `snippets/` folder and in your user `snippets.
 
 `$` followed by a number marks tab stops that can be cycled with tab once the snippet has expanded. Snippets support a subset of TextMate features plus LSP and VSCode-style variables such as `TM_SELECTED_TEXT`, `TM_FILENAME`, and `CLIPBOARD`, with transformation flags like `/upcase`, `/downcase`, `/camelcase`, and `/kebabcase`.
 
+In transformation replacements, `\l` and `\u` change the next character to lowercase or uppercase. `\L` and `\U` change the remaining text until `\E` ends the case region.
+
 ## Services
 
 - `autocomplete.provider`: provided to supply snippet suggestions to autocomplete.

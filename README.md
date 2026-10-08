@@ -2,6 +2,8 @@
 
 Expand snippets matching the current prefix with the tab key.
 
+Fork of [pulsar-edit/pulsar](https://github.com/pulsar-edit/pulsar) (`packages/snippets`).
+
 ## Features
 
 - **Prefix expansion**: type a prefix and press tab to expand it into its full body.

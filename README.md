@@ -33,14 +33,14 @@ Commands available in `lumine-text-editor`:
 
 Snippet files live in a package's `snippets/` folder and in your user `snippets.json`, and may be `.json`, `.jsonc`, or `.cson`. The outermost keys are the scope selectors, the next level are snippet names, and each snippet provides a `body` along with at least one trigger (`prefix` or `command`):
 
-```jsonc
+```json
 {
   ".source.js": {
     "console.log": {
       "prefix": "log",
-      "body": "console.log(${1:\"crash\"});$2",
-    },
-  },
+      "body": "console.log(${1:\"crash\"});$2"
+    }
+  }
 }
 ```
 

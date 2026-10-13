@@ -19,7 +19,9 @@
       "submenu": [
         {
           "label": "Insert Snippet…",
-          "command": "snippets:available"
+          "command": "snippets:available",
+          "group": "insert",
+          "order": 10
         }
       ]
     }

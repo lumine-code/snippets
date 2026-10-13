@@ -1,0 +1,16 @@
+{
+  "title": "snippets",
+  "description": "Browse snippets for the current language.",
+  "recordedOn": "2026-10-13",
+  "sourceRevision": "df8b9a30576c0917a70fee7dbffa4111d90f6b9e",
+  "mode": "normal",
+  "fontSettings": "default",
+  "images": [
+    {
+      "file": "demo.png",
+      "label": "Browse snippets for the current language.",
+      "width": 1100,
+      "height": 720
+    }
+  ]
+}

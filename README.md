@@ -13,6 +13,8 @@ Fork of [pulsar-edit/pulsar](https://github.com/pulsar-edit/pulsar) (`packages/s
 - **Variables and transforms**: use LSP and VSCode-style variables with case and sed-style transformations.
 - **User and package snippets**: load snippets from packages and from your user `snippets.json`.
 
+![Browse snippets for the current language.](.github/demo.png)
+
 ## Installation
 
 To install `snippets` search for it in the Install pane of the Lumine settings, or run the command `lumine --install lumine-code/snippets`.

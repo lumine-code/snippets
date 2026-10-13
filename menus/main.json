@@ -13,6 +13,15 @@
           ]
         }
       ]
+    },
+    {
+      "label": "Edit",
+      "submenu": [
+        {
+          "label": "Insert Snippet…",
+          "command": "snippets:available"
+        }
+      ]
     }
   ]
 }

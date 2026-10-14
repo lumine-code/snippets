@@ -60,6 +60,38 @@ describe("Snippet Loading", () => {
     expect(csonSnippet.tabStopList.length).toBeGreaterThan(0);
   });
 
+  it("settles an empty package catalogue synchronously", async () => {
+    await activateSnippetsPackage();
+    lumine.packages.getLoadedPackages.and.returnValue([]);
+    const main = lumine.packages.getActivePackage("snippets").mainModule;
+    let returned = false;
+    const callback = jasmine.createSpy("loaded").and.callFake((snippets) => {
+      expect(returned).toBe(false);
+      expect(snippets).toEqual({});
+    });
+    main.loadPackageSnippets(callback);
+    returned = true;
+    expect(callback).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps package precedence when parallel snippet directories finish in reverse order", async () => {
+    await activateSnippetsPackage();
+    const main = lumine.packages.getActivePackage("snippets").mainModule;
+    lumine.packages.getLoadedPackages.and.returnValue([
+      { name: "first", path: path.join(configDirPath, "first") },
+      { name: "second", path: path.join(configDirPath, "second") },
+    ]);
+    const reads = [];
+    spyOn(main, "loadSnippetsDirectory").and.callFake((_directory, done) => reads.push(done));
+    const callback = jasmine.createSpy("loaded");
+    main.loadPackageSnippets(callback);
+    expect(reads.length).toBe(2);
+    reads[1](null, { shared: "second" });
+    expect(callback).not.toHaveBeenCalled();
+    reads[0](null, { shared: "first" });
+    expect(callback).toHaveBeenCalledOnceWith({ shared: "second" });
+  });
+
   it("loads non-hidden snippet files from lumine packages with snippets directories", async () => {
     await activateSnippetsPackage();
 

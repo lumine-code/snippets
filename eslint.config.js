@@ -8,7 +8,7 @@ const prettier = require("eslint-config-prettier");
 const runtimeModules = ["lumine", "electron"];
 
 module.exports = [
-  { ignores: ["spec/fixtures/**", "lib/snippet-body.js"] },
+  { ignores: ["spec/fixtures/**", "lib/snippet-body.js", "demo/**"] },
   js.configs.recommended,
   n.configs["flat/recommended-script"],
   {

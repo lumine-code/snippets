@@ -1,7 +1,7 @@
 // Authentic package usage. Run with lumine/script/demo.js; fixtures stay in demo/.
 module.exports = {
   version: 1,
-  dependencies: [],
+  dependencies: ["language-javascript"],
   viewport: { width: 1100, height: 720 },
   async before() {},
   async prepare(context) {
@@ -17,23 +17,28 @@ module.exports = {
       async run(context) {
         const { lumine, state, waitFor } = context;
         {
-          lumine.commands.dispatch(lumine.views.getView(state.editor), "snippets:available");
+          await lumine.commands.dispatch(lumine.views.getView(state.editor), "snippets:available");
           await waitFor(
-            () => lumine.workspace.getModalPanels().some((p) => p.isVisible()),
+            () =>
+              lumine.packages
+                .getActivePackage("snippets")
+                .mainModule.availableSnippetsView?.selectListHost.isVisible(),
             "action picker",
           );
-          const input = lumine.workspace
-            .getModalPanels()
-            .find((p) => p.isVisible())
-            .getElement()
-            .querySelector("lumine-text-editor[mini]");
-          if (!input) throw new Error("Missing picker input");
-          input.getModel().setText("for");
+          const view =
+            lumine.packages.getActivePackage("snippets").mainModule.availableSnippetsView;
+          await view.selectList.setQuery("for");
+          view.selectList.getQueryEditor().getElement().focus();
         }
       },
       ready(context) {
         const { lumine } = context;
-        return Boolean(lumine.workspace.getModalPanels().some((panel) => panel.isVisible()));
+        const view = lumine.packages.getActivePackage("snippets").mainModule.availableSnippetsView;
+        return (
+          view?.selectListHost.isVisible() &&
+          view.element.getBoundingClientRect().height > 0 &&
+          view.element.textContent.includes("for")
+        );
       },
     },
   ],

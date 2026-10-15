@@ -7,7 +7,7 @@
           "label": "Snippets",
           "submenu": [
             {
-              "label": "Available",
+              "label": "Insert Snippet…",
               "command": "snippets:available"
             }
           ]

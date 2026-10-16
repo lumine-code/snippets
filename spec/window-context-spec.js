@@ -8,6 +8,20 @@ describe("available snippets in editor windows", () => {
     await lumine.packages.deactivatePackage("snippets");
     await lumine.workspace.discardEditorWindows();
   });
+  it("offers insertion only in a writable non-mini editor", async () => {
+    const editor = await lumine.workspace.open();
+    const command = "snippets:available";
+    expect(lumine.commands.canDispatch(lumine.workspace.getElement(), command)).toBe(false);
+    expect(lumine.commands.canDispatch(editor.element, command)).toBe(true);
+    editor.setReadOnly(true);
+    expect(lumine.commands.canDispatch(editor.element, command)).toBe(false);
+    const mini = lumine.workspace.buildTextEditor({ mini: true });
+    try {
+      expect(lumine.commands.canDispatch(mini.element, command)).toBe(false);
+    } finally {
+      mini.destroy();
+    }
+  });
   it("inserts into the captured local editor while another snippets list remains open", async () => {
     const workspace = lumine.workspace;
     const first = await workspace.open();

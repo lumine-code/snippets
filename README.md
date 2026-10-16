@@ -21,9 +21,13 @@ To install `snippets` search for it in the Install pane of the Lumine settings, 
 
 ## Commands
 
-Commands available in `lumine-workspace`:
+Commands available in `lumine-text-editor:not([mini]):not([readonly])`:
 
 - `snippets:available`: show the snippets available for the current editor.
+
+Commands available in the snippets list:
+
+- `snippets:available`: close the list without inserting a snippet.
 
 Commands available in `lumine-text-editor`:
 

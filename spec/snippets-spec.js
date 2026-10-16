@@ -2111,9 +2111,7 @@ foo\
 
       delete Snippets.availableSnippetsView;
 
-      // snippets:available is registered on lumine-workspace: it acts on the
-      // active editor, so unlike expansion it need not reach a detached one.
-      lumine.commands.dispatch(lumine.workspace.getElement(), "snippets:available");
+      lumine.commands.dispatch(editor.getElement(), "snippets:available");
 
       await conditionPromise(() => lumine.workspace.getModalPanels().length === 1);
 
@@ -2147,7 +2145,7 @@ foo\
     });
 
     it("closes the dialog when triggered again", () => {
-      lumine.commands.dispatch(lumine.workspace.getElement(), "snippets:available");
+      lumine.commands.dispatch(availableSnippetsView.element, "snippets:available");
       expect(lumine.workspace.getModalPanels().filter((panel) => panel.isVisible()).length).toBe(0);
     });
   });

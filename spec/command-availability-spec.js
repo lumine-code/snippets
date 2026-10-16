@@ -34,4 +34,28 @@ describe("Snippet command availability", () => {
     expect(lumine.commands.canDispatch(editor.element, "review:in-plain")).toBe(false);
     expect(lumine.commands.canDispatch(editor.element, "snippets:next-tab-stop")).toBe(true);
   });
+  it("keeps a captured editor unchanged when it becomes readonly in the snippets list", async () => {
+    const List = require("../lib/snippets-available");
+    const list = new List(main);
+    try {
+      await list.toggle(editor);
+      editor.setReadOnly(true);
+      expect((await list.selectList.confirmSelection()).status).toBe("disabled");
+      expect(list.selectListHost.isVisible()).toBe(true);
+      expect(editor.getText()).toBe("");
+    } finally {
+      list.destroy();
+    }
+  });
+  it("dismisses its own list when the captured editor is destroyed", async () => {
+    const List = require("../lib/snippets-available");
+    const list = new List(main);
+    try {
+      await list.toggle(editor);
+      editor.destroy();
+      expect(list.selectListHost.isVisible()).toBe(false);
+    } finally {
+      list.destroy();
+    }
+  });
 });

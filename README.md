@@ -29,9 +29,12 @@ Commands available in the snippets list:
 
 - `snippets:available`: close the list without inserting a snippet.
 
+Commands available in `lumine-text-editor:not([readonly])`:
+
+- `snippets:expand`: expand the snippet under the cursor.
+
 Commands available in `lumine-text-editor`:
 
-- `snippets:expand`: expand the snippet under the cursor,
 - `snippets:next-tab-stop`: move to the next tab stop,
 - `snippets:previous-tab-stop`: move to the previous tab stop.
 

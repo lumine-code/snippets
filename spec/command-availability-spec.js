@@ -28,6 +28,9 @@ describe("Snippet command availability", () => {
   it("does not advertise expansion or named insertion in readonly editors", () => {
     editor.setReadOnly(true);
     expect(lumine.commands.canDispatch(editor.element, "snippets:expand")).toBe(false);
+    expect(
+      lumine.keymaps.findKeyBindings({ target: editor.element, command: "snippets:expand" }),
+    ).toEqual([]);
     expect(lumine.commands.canDispatch(editor.element, "review:in-plain")).toBe(false);
     expect(lumine.commands.canDispatch(editor.element, "snippets:next-tab-stop")).toBe(true);
   });

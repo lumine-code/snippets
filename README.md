@@ -60,6 +60,8 @@ In transformation replacements, `\l` and `\u` change the next character to lower
 - [`snippets`](docs/snippets.md): provided to expose the loaded snippets so other packages can query and expand them.
 - `background-tips.provider`: provided to explain snippet expansion in the empty workspace.
 
+Prefix expansion and named snippet insertion require a writable editor, including mini inputs. Named commands remain visible but unavailable when their loaded snippet scope does not match the cursor.
+
 ## Contributing
 
 Got ideas to make this package better, found a bug, or want to help add new features? Just drop your thoughts on GitHub. Any feedback is welcome!

@@ -17,6 +17,36 @@ describe("snippets lifecycle", () => {
     await lumine.packages.deactivatePackage("snippets");
   });
 
+  it("settles deferred indexing when deactivated before the loading microtask", async () => {
+    Snippets.activate({ signal: new AbortController().signal });
+    const loading = Snippets.loadingPromise;
+    let result = "pending";
+    loading.then((value) => (result = value));
+    Snippets.deactivate();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(result).toBe(false);
+    expect(Snippets.loadAll).not.toHaveBeenCalled();
+    expect(Snippets.watchUserSnippets).not.toHaveBeenCalled();
+  });
+
+  it("does not start indexing or watching after its activation signal is aborted", async () => {
+    const controller = new AbortController();
+    Snippets.activate({ signal: controller.signal });
+    const loading = Snippets.loadingPromise;
+    controller.abort();
+    let result = "pending";
+    loading.then((value) => (result = value));
+    await Promise.resolve();
+    await Promise.resolve();
+    Snippets.deactivate();
+
+    expect(result).toBe(false);
+    expect(Snippets.loadAll).not.toHaveBeenCalled();
+    expect(Snippets.watchUserSnippets).not.toHaveBeenCalled();
+  });
+
   it("rebuilds dynamic command ownership on every activation", async () => {
     const editor = await lumine.workspace.open(path.join(__dirname, "fixtures", "sample.js"));
     await lumine.packages.activatePackage("language-javascript");

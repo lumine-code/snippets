@@ -1957,6 +1957,7 @@ foo\
     });
 
     it("interpolates WORKSPACE_NAME correctly", () => {
+      lumine.project.setPaths([path.join(__dirname, "fixtures")]);
       editor.insertText("wn");
       simulateTabKeyEvent();
       expect(editor.getText()).toBe("the name of this project is fixtures");
@@ -2142,6 +2143,34 @@ foo\
       expect(editor.lineTextForBufferRow(0)).toBe(
         "Test pass you will, young var quicksort = function () {",
       );
+    });
+
+    it("keeps the captured editor available for repeated insertions until the list hides", async () => {
+      const list = availableSnippetsView.selectList;
+      const insert = spyOn(Snippets, "insert").and.callThrough();
+      await list.runAction("select-list:toggle-keep-open");
+
+      await list.confirmSelection();
+      await list.confirmSelection();
+
+      expect(insert).toHaveBeenCalledTimes(2);
+      expect(insert.calls.allArgs().every(([, target]) => target === editor)).toBe(true);
+      expect(availableSnippetsView.editor).toBe(editor);
+      expect(availableSnippetsView.selectListHost.isVisible()).toBe(true);
+      availableSnippetsView.cancel();
+      expect(availableSnippetsView.editor).toBeNull();
+      expect(availableSnippetsView.editorDestroySubscription).toBeNull();
+    });
+
+    it("closes an empty list even in keep-open mode", async () => {
+      const list = availableSnippetsView.selectList;
+      await list.runAction("select-list:toggle-keep-open");
+      await list.setItems([]);
+
+      await list.confirmSelection();
+
+      expect(availableSnippetsView.selectListHost.isVisible()).toBe(false);
+      expect(availableSnippetsView.editor).toBeNull();
     });
 
     it("closes the dialog when triggered again", () => {

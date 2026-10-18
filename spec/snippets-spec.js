@@ -44,7 +44,7 @@ describe("Snippets extension", () => {
 
   afterEach(async () => {
     if (languageMode) {
-      await languageMode.atTransactionEnd();
+      await editor.whenGrammarSettled();
     }
     editor.destroy();
     await lumine.packages.deactivatePackage("snippets");
@@ -766,9 +766,9 @@ third tabstop $3\
         it("indents the subsequent lines of the snippet based on the indent level before the snippet is inserted", async () => {
           editor.setCursorScreenPosition([2, Infinity]);
           editor.insertNewline();
-          await languageMode.atTransactionEnd();
+          await editor.whenGrammarSettled();
           editor.insertText("t4b");
-          await languageMode.atTransactionEnd();
+          await editor.whenGrammarSettled();
           lumine.commands.dispatch(editorElement, "snippets:expand");
 
           expect(editor.lineTextForBufferRow(3)).toBe("     = line 1 {"); // 4 + 1 spaces (because the tab stop is invisible)
@@ -780,9 +780,9 @@ third tabstop $3\
         it("does not change the relative positioning of the tab stops when inserted multiple times", async () => {
           editor.setCursorScreenPosition([2, Infinity]);
           editor.insertNewline();
-          await languageMode.atTransactionEnd();
+          await editor.whenGrammarSettled();
           editor.insertText("t4");
-          await languageMode.atTransactionEnd();
+          await editor.whenGrammarSettled();
           lumine.commands.dispatch(editorElement, "snippets:expand");
 
           expect(editor.getSelectedBufferRange()).toEqual([
@@ -796,7 +796,7 @@ third tabstop $3\
           ]);
 
           editor.insertText("t4");
-          await languageMode.atTransactionEnd();
+          await editor.whenGrammarSettled();
           lumine.commands.dispatch(editorElement, "snippets:expand");
 
           expect(editor.getSelectedBufferRange()).toEqual([
@@ -810,9 +810,9 @@ third tabstop $3\
           ]);
 
           editor.setText(""); // Clear editor
-          await languageMode.atTransactionEnd();
+          await editor.whenGrammarSettled();
           editor.insertText("t4");
-          await languageMode.atTransactionEnd();
+          await editor.whenGrammarSettled();
           lumine.commands.dispatch(editorElement, "snippets:expand");
 
           expect(editor.getSelectedBufferRange()).toEqual([
@@ -830,7 +830,7 @@ third tabstop $3\
       describe("when multiple snippets match the prefix", () => {
         it("expands the snippet that is the longest match for the prefix", async () => {
           editor.insertText("t113");
-          await languageMode.atTransactionEnd();
+          await editor.whenGrammarSettled();
           expect(editor.getCursorScreenPosition()).toEqual([0, 4]);
 
           simulateTabKeyEvent();
@@ -841,7 +841,7 @@ third tabstop $3\
           editor.undo();
 
           editor.insertText("tt1");
-          await languageMode.atTransactionEnd();
+          await editor.whenGrammarSettled();
           expect(editor.getCursorScreenPosition()).toEqual([0, 3]);
 
           simulateTabKeyEvent();
@@ -852,10 +852,10 @@ third tabstop $3\
 
           editor.undo();
           editor.undo();
-          await languageMode.atTransactionEnd();
+          await editor.whenGrammarSettled();
 
           editor.insertText("@t1");
-          await languageMode.atTransactionEnd();
+          await editor.whenGrammarSettled();
           expect(editor.getCursorScreenPosition()).toEqual([0, 3]);
 
           simulateTabKeyEvent();
@@ -1071,7 +1071,7 @@ third tabstop $3\
         editor.setCursorScreenPosition([0, 3]);
         simulateTabKeyEvent();
         expect(editor.getText()).toBe("[b][/b]");
-        await languageMode.atTransactionEnd();
+        await editor.whenGrammarSettled();
         editor.insertText("img src");
         expect(editor.getText()).toBe("[img src][/img]");
       });
@@ -1664,15 +1664,15 @@ foo\
         await languageMode.ready;
 
         editor.insertText("t2");
-        await languageMode.atTransactionEnd();
+        await editor.whenGrammarSettled();
         simulateTabKeyEvent();
         editor.insertText("ABC");
-        await languageMode.atTransactionEnd();
+        await editor.whenGrammarSettled();
         expect(editor.getText()).toContain("go here first:(ABC)");
 
         editor.undo();
         editor.undo();
-        await languageMode.atTransactionEnd();
+        await editor.whenGrammarSettled();
         expect(editor.getText()).toBe("t2");
         simulateTabKeyEvent();
         editor.insertText("ABC");

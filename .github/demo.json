@@ -1,9 +1,9 @@
 {
   "title": "snippets",
   "description": "Browse snippets for the current language.",
-  "recordedOn": "2026-10-14",
-  "sourceRevision": "41dc55c90bde2290cf762976cd9f0feeec0bc5ba",
-  "themeSourceRevision": "7fbd047a87ecf1367c896b19ff270cdc28d319f7",
+  "recordedOn": "2026-10-18",
+  "sourceRevision": "ffdeabf62cc0d824d0edb3923e15d84053471593",
+  "themeSourceRevision": "45b22049e87256e9327beb0b350e67fe81d7fc81",
   "mode": "normal",
   "fontSettings": "default",
   "scenario": "demo.js",
@@ -11,8 +11,8 @@
   "environment": {
     "platform": "win32",
     "arch": "x64",
-    "electron": "44.7.0",
-    "chrome": "152.0.7977.130",
+    "electron": "44.9.0",
+    "chrome": "152.0.7977.167",
     "devicePixelRatio": 1,
     "locale": "en-GB",
     "fontFamily": "Fira Code, Menlo, DejaVu Sans Mono, Consolas, monospace",
@@ -21,29 +21,30 @@
   },
   "viewport": { "width": 1100, "height": 720 },
   "cornerRadius": 10,
+  "privacy": { "version": 1, "location": "neutral", "textChecked": true },
   "sources": {
     "editor": {
-      "revision": "d0b1751fffac65f10a405545e5f01cf7ad05c0bb",
+      "revision": "10950c83cb6d964aadbcf4036af67c6484c1341d",
       "dirty": false,
       "workingTreeHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
     },
     "package": {
-      "revision": "41dc55c90bde2290cf762976cd9f0feeec0bc5ba",
+      "revision": "ffdeabf62cc0d824d0edb3923e15d84053471593",
       "dirty": false,
       "workingTreeHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
     },
     "snippets": {
-      "revision": "41dc55c90bde2290cf762976cd9f0feeec0bc5ba",
+      "revision": "ffdeabf62cc0d824d0edb3923e15d84053471593",
       "dirty": false,
       "workingTreeHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
     },
     "language-javascript": {
-      "revision": "ae2e6968e3a349fb4d09ce53e339a0f8cce903aa",
+      "revision": "721d40ef20e4ffda4125b375f50c908541fa7c08",
       "dirty": false,
       "workingTreeHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
     },
     "one-theme": {
-      "revision": "7fbd047a87ecf1367c896b19ff270cdc28d319f7",
+      "revision": "45b22049e87256e9327beb0b350e67fe81d7fc81",
       "dirty": false,
       "workingTreeHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
     }
@@ -60,7 +61,7 @@
       "label": "Browse snippets for the current language.",
       "width": 1100,
       "height": 720,
-      "sha256": "514d2652b29ae455d942f0b39c455759811c9ddf1696115c72f7bd0232570da2"
+      "sha256": "24b2f33d12d7a0685d48441d3fc794c32b67946540b22dd55fed76d6eb2bd632"
     }
   ]
 }

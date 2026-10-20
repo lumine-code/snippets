@@ -90,6 +90,40 @@ describe("Snippet autocomplete", () => {
     );
   });
 
+  it("builds menu entries from metadata without parsing any snippet bodies", async () => {
+    spyOn(snippets, "getParsedSnippet").and.callThrough();
+    spyOn(snippets, "getBodyParser").and.callThrough();
+    const results = await provider.getSuggestions({ scopeDescriptor, prefix: "zz" });
+    expect(results.length).toBe(4);
+    expect(snippets.getParsedSnippet).not.toHaveBeenCalled();
+    expect(snippets.getBodyParser).not.toHaveBeenCalled();
+    editor.setText("zzdo");
+    editor.moveToEndOfLine();
+    lumine.commands.dispatch(editorElement, "snippets:expand");
+    expect(editor.getSelectedText()).toBe("work");
+    expect(snippets.getBodyParser).toHaveBeenCalled();
+  });
+
+  it("does not query metadata for a request cancelled while snippets load", async () => {
+    let loaded;
+    spyOn(snippets, "waitForSnippetsLoaded").and.returnValue(
+      new Promise((resolve) => {
+        loaded = resolve;
+      }),
+    );
+    spyOn(snippets, "snippetAttributesForScopes").and.callThrough();
+    const controller = new AbortController();
+    const pending = provider.getSuggestions({
+      scopeDescriptor,
+      prefix: "zz",
+      signal: controller.signal,
+    });
+    controller.abort();
+    loaded(true);
+    expect(await pending).toEqual([]);
+    expect(snippets.snippetAttributesForScopes).not.toHaveBeenCalled();
+  });
+
   it("shows suggestions and expands the confirmed snippet with live tab stops", async () => {
     expect(autocomplete.autocompleteManager.providerManager.isProviderRegistered(provider)).toBe(
       true,

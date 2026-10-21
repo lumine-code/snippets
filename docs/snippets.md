@@ -2,12 +2,12 @@
 
 Query the loaded snippets and expand one into an editor.
 
-|             |                                              |
-| ----------- | -------------------------------------------- |
-| Version     | `1.0.0`                                      |
-| Provided by | `provideSnippets()` returning five functions |
-| Consumed by | `consumeSnippets(service)`                   |
-| Owner       | `snippets` (bundled)                         |
+|             |                                                   |
+| ----------- | ------------------------------------------------- |
+| Version     | `1.0.0`                                           |
+| Provided by | `provideSnippets()` returning the snippet service |
+| Consumed by | `consumeSnippets(service)`                        |
+| Owner       | `snippets` (bundled)                              |
 
 Consumed by completion providers that want snippets in their suggestion list, and by settings UIs that list what is available. A package that only wants to _ship_ snippets does not need this service — it puts a `snippets/` directory in its package instead.
 
@@ -28,7 +28,22 @@ In your `package.json`:
 ## Contract
 
 ```ts
+type PreparedSnippet = {
+  cursors: Cursor[];
+  isCurrent(): boolean;
+  insert(
+    cursor: Cursor,
+    options?: { method?: string; adjustIndentation?: boolean },
+  ): SnippetExpansion | undefined;
+};
+
 type Snippets = {
+  prepareSnippet?(
+    body: string,
+    editor: TextEditor,
+    cursors?: Cursor[],
+    options?: { method?: string; adjustIndentation?: boolean; positions?: Point[] },
+  ): PreparedSnippet | null | Promise<PreparedSnippet | null>;
   bundledSnippetsLoaded(): boolean;
   snippetsForScopes(scopeDescriptor: ScopeDescriptor): Record<string, Snippet>;
   getUnparsedSnippets(): object[];
@@ -51,6 +66,8 @@ type Snippets = {
 | `insertSnippet(body, editor, cursor)` | Expands a snippet body at the cursor and resolves to the live expansion.                       |
 
 `insertSnippet` also accepts a fourth `{ method }` argument, which records how the expansion was triggered. Leave it out unless you are reproducing one of the package's own commands.
+
+For a batch, call `prepareSnippet` before changing any text. It parses the body once and resolves clipboard and syntax-dependent comment variables for every supplied cursor. Check `isCurrent()` immediately before the transaction, then call `insert(cursor)` once per captured cursor inside it; selection ranges may be adjusted during that transaction. `positions` optionally supplies the planned lookup locations for comment variables, such as the ends of completion edit ranges. Preparation returns `null` after source, cursor or owner changes. Providers without this optional method retain the single-insertion contract.
 
 ## Minimal example
 

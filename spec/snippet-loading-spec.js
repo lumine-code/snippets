@@ -139,11 +139,7 @@ describe("Snippet Loading", () => {
   describe("::loadPackageSnippets(callback)", () => {
     const jsPackage = () => {
       const pack = lumine.packages.loadPackage("language-javascript");
-      pack.path = path.join(
-        lumine.application.getResourcePath(),
-        "node_modules",
-        "language-javascript",
-      );
+      expect(lumine.packages.isBundledPackage(pack.name)).toBeTrue();
       return pack;
     };
 
@@ -155,9 +151,6 @@ describe("Snippet Loading", () => {
       ]);
     });
 
-    // NOTE: This spec will fail if you're hacking on the Lumine source code
-    // with `LUMINE_RESOURCE_PATH`. Just make sure it passes in CI and you'll
-    // be fine.
     it("allows other packages to override core packages' snippets", async () => {
       await lumine.packages.activatePackage("language-javascript");
 

@@ -99,7 +99,7 @@ describe("Snippet autocomplete", () => {
     expect(snippets.getBodyParser).not.toHaveBeenCalled();
     editor.setText("zzdo");
     editor.moveToEndOfLine();
-    lumine.commands.dispatch(editorElement, "snippets:expand");
+    await lumine.commands.dispatch(editorElement, "snippets:expand");
     expect(editor.getSelectedText()).toBe("work");
     expect(snippets.getBodyParser).toHaveBeenCalled();
   });
@@ -135,10 +135,10 @@ describe("Snippet autocomplete", () => {
     expect(editorElement.querySelector(".autocomplete span.word")).toHaveText("zzdo");
     expect(editorElement.querySelector(".autocomplete span.right-label")).toHaveText("Loop");
 
-    lumine.commands.dispatch(editorElement, "autocomplete:confirm");
+    await lumine.commands.dispatch(editorElement, "autocomplete:confirm");
     expect(editor.getText()).toContain("} while (true)");
     expect(editor.getSelectedText()).toBe("work");
-    lumine.commands.dispatch(editorElement, "snippets:next-tab-stop");
+    await lumine.commands.dispatch(editorElement, "snippets:next-tab-stop");
     expect(editor.getSelectedText()).toBe("true");
   });
 
@@ -148,7 +148,7 @@ describe("Snippet autocomplete", () => {
 
     editor.setText("zzdo");
     editor.moveToEndOfLine();
-    lumine.commands.dispatch(editorElement, "snippets:expand");
+    await lumine.commands.dispatch(editorElement, "snippets:expand");
     expect(editor.getText()).toContain("} while (true)");
 
     lumine.config.set("snippets.enableAutocomplete", true);
@@ -207,7 +207,7 @@ describe("Snippet autocomplete", () => {
     await lumine.packages.deactivatePackage("autocomplete");
     editor.setText("zzdo");
     editor.moveToEndOfLine();
-    lumine.commands.dispatch(editorElement, "snippets:expand");
+    await lumine.commands.dispatch(editorElement, "snippets:expand");
     expect(editor.getSelectedText()).toBe("work");
 
     autocomplete = (await lumine.packages.activatePackage("autocomplete")).mainModule;

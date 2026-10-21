@@ -6,9 +6,9 @@ const crypto = require("crypto");
 const SUPPORTS_UUID = "randomUUID" in crypto && typeof crypto.randomUUID === "function";
 
 describe("Snippets extension", () => {
-  let editorElement, editor, languageMode, Snippets;
+  let editorElement, editor, languageMode, Snippets, expansionRequests;
 
-  const simulateTabKeyEvent = (param) => {
+  const simulateTabKeyEvent = async (param) => {
     if (param == null) {
       param = {};
     }
@@ -17,7 +17,10 @@ describe("Snippets extension", () => {
       shift,
       target: editorElement,
     });
+    const before = expansionRequests.length;
     lumine.keymaps.handleKeyboardEvent(event);
+    await Promise.all(expansionRequests.slice(before));
+    await editor.whenGrammarSettled();
   };
 
   beforeEach(async () => {
@@ -40,6 +43,14 @@ describe("Snippets extension", () => {
     editorElement = lumine.views.getView(editor);
     languageMode = editor.getBuffer().getLanguageMode();
     await languageMode.ready;
+    Snippets = lumine.packages.getActivePackage("snippets").mainModule;
+    expansionRequests = [];
+    const expand = Snippets.expandSnippetsUnderCursors;
+    spyOn(Snippets, "expandSnippetsUnderCursors").and.callFake(function (...args) {
+      const result = expand.apply(this, args);
+      expansionRequests.push(result);
+      return result;
+    });
   });
 
   afterEach(async () => {
@@ -78,29 +89,29 @@ describe("Snippets extension", () => {
     });
 
     describe("insertSnippet", () => {
-      it("can insert a snippet", () => {
+      it("can insert a snippet", async () => {
         editor.setSelectedBufferRange([
           [0, 4],
           [0, 13],
         ]);
-        snippetsInterface.insertSnippet("hello ${1:world}", editor);
+        await snippetsInterface.insertSnippet("hello ${1:world}", editor);
         expect(editor.lineTextForBufferRow(0)).toBe("var hello world = function () {");
       });
 
-      it("indents the lines of a multi-line snippet to match where it lands", () => {
+      it("indents the lines of a multi-line snippet to match where it lands", async () => {
         editor.setText("  start\n");
         editor.setCursorBufferPosition([0, 7]);
-        snippetsInterface.insertSnippet("\nsecond\nthird", editor);
+        await snippetsInterface.insertSnippet("\nsecond\nthird", editor);
         expect(editor.lineTextForBufferRow(1)).toBe("  second");
         expect(editor.lineTextForBufferRow(2)).toBe("  third");
       });
 
-      it("inserts a snippet exactly as written when indentation is not adjusted", () => {
+      it("inserts a snippet exactly as written when indentation is not adjusted", async () => {
         editor.setText("  start\n");
         editor.setCursorBufferPosition([0, 7]);
         // A language server sending LSP `insertTextMode: asIs` has already
         // decided what the text should look like.
-        snippetsInterface.insertSnippet("\nsecond\nthird", editor, undefined, {
+        await snippetsInterface.insertSnippet("\nsecond\nthird", editor, undefined, {
           adjustIndentation: false,
         });
         expect(editor.lineTextForBufferRow(1)).toBe("second");
@@ -436,11 +447,11 @@ third tabstop $3\
       });
     });
 
-    it("parses snippets once, reusing cached ones on subsequent queries", () => {
+    it("parses snippets once, reusing cached ones on subsequent queries", async () => {
       spyOn(Snippets, "getBodyParser").and.callThrough();
 
       editor.insertText("t1");
-      simulateTabKeyEvent();
+      await simulateTabKeyEvent();
 
       expect(Snippets.getBodyParser).toHaveBeenCalled();
       expect(editor.lineTextForBufferRow(0)).toBe("this is a testvar quicksort = function () {");
@@ -450,7 +461,7 @@ third tabstop $3\
 
       editor.setText("");
       editor.insertText("t1");
-      simulateTabKeyEvent();
+      await simulateTabKeyEvent();
 
       expect(Snippets.getBodyParser).not.toHaveBeenCalled();
       expect(editor.lineTextForBufferRow(0)).toBe("this is a test");
@@ -469,7 +480,7 @@ third tabstop $3\
 
       editor.setText("");
       editor.insertText("t1");
-      simulateTabKeyEvent();
+      await simulateTabKeyEvent();
 
       expect(Snippets.getBodyParser).toHaveBeenCalled();
       expect(editor.lineTextForBufferRow(0)).toBe("new snippet");
@@ -477,39 +488,39 @@ third tabstop $3\
     });
 
     describe("when the snippet body is invalid or missing", () => {
-      it("does not register the snippet", () => {
+      it("does not register the snippet", async () => {
         editor.setText("");
         editor.insertText("bad1");
-        lumine.commands.dispatch(editorElement, "snippets:expand");
+        await lumine.commands.dispatch(editorElement, "snippets:expand");
         expect(editor.getText()).toBe("bad1");
 
         editor.setText("");
         editor.setText("bad2");
-        lumine.commands.dispatch(editorElement, "snippets:expand");
+        await lumine.commands.dispatch(editorElement, "snippets:expand");
         expect(editor.getText()).toBe("bad2");
       });
     });
 
     describe("when the letters preceding the cursor trigger a snippet", () => {
       describe("when the snippet contains no tab stops", () => {
-        it("replaces the prefix with the snippet text and places the cursor at its end", () => {
+        it("replaces the prefix with the snippet text and places the cursor at its end", async () => {
           editor.insertText("t1");
           expect(editor.getCursorScreenPosition()).toEqual([0, 2]);
 
-          simulateTabKeyEvent();
+          await simulateTabKeyEvent();
           expect(editor.lineTextForBufferRow(0)).toBe(
             "this is a testvar quicksort = function () {",
           );
           expect(editor.getCursorScreenPosition()).toEqual([0, 14]);
         });
 
-        it("inserts a real tab the next time a tab is pressed after the snippet is expanded", () => {
+        it("inserts a real tab the next time a tab is pressed after the snippet is expanded", async () => {
           editor.insertText("t1");
-          simulateTabKeyEvent();
+          await simulateTabKeyEvent();
           expect(editor.lineTextForBufferRow(0)).toBe(
             "this is a testvar quicksort = function () {",
           );
-          simulateTabKeyEvent();
+          await simulateTabKeyEvent();
           expect(editor.lineTextForBufferRow(0)).toBe(
             "this is a test  var quicksort = function () {",
           );
@@ -517,11 +528,11 @@ third tabstop $3\
       });
 
       describe("when the snippet contains tab stops", () => {
-        it("places the cursor at the first tab-stop, and moves the cursor in response to 'next-tab-stop' events", () => {
+        it("places the cursor at the first tab-stop, and moves the cursor in response to 'next-tab-stop' events", async () => {
           const markerCountBefore = editor.getMarkerCount();
           editor.setCursorScreenPosition([2, 0]);
           editor.insertText("t2");
-          simulateTabKeyEvent();
+          await simulateTabKeyEvent();
           expect(editor.lineTextForBufferRow(2)).toBe("go here next:() and finally go here:()");
           expect(editor.lineTextForBufferRow(3)).toBe("go here first:()");
           expect(editor.lineTextForBufferRow(4)).toBe("    if (items.length <= 1) return items;");
@@ -530,40 +541,40 @@ third tabstop $3\
             [3, 15],
           ]);
 
-          simulateTabKeyEvent();
+          await simulateTabKeyEvent();
           expect(editor.getSelectedBufferRange()).toEqual([
             [2, 14],
             [2, 14],
           ]);
           editor.insertText("abc");
 
-          simulateTabKeyEvent();
+          await simulateTabKeyEvent();
           expect(editor.getSelectedBufferRange()).toEqual([
             [2, 40],
             [2, 40],
           ]);
 
           // tab backwards
-          simulateTabKeyEvent({ shift: true });
+          await simulateTabKeyEvent({ shift: true });
           expect(editor.getSelectedBufferRange()).toEqual([
             [2, 14],
             [2, 17],
           ]); // should highlight text typed at tab stop
 
-          simulateTabKeyEvent({ shift: true });
+          await simulateTabKeyEvent({ shift: true });
           expect(editor.getSelectedBufferRange()).toEqual([
             [3, 15],
             [3, 15],
           ]);
 
           // shift-tab on first tab-stop does nothing
-          simulateTabKeyEvent({ shift: true });
+          await simulateTabKeyEvent({ shift: true });
           expect(editor.getCursorScreenPosition()).toEqual([3, 15]);
 
           // tab through all tab stops, then tab on last stop to terminate snippet
-          simulateTabKeyEvent();
-          simulateTabKeyEvent();
-          simulateTabKeyEvent();
+          await simulateTabKeyEvent();
+          await simulateTabKeyEvent();
+          await simulateTabKeyEvent();
           expect(editor.lineTextForBufferRow(2)).toBe(
             "go here next:(abc) and finally go here:(  )",
           );
@@ -571,17 +582,17 @@ third tabstop $3\
         });
 
         describe("when tab stops are nested", () => {
-          it("destroys the inner tab stop if the outer tab stop is modified", () => {
+          it("destroys the inner tab stop if the outer tab stop is modified", async () => {
             editor.setText("");
             editor.insertText("t5");
-            lumine.commands.dispatch(editorElement, "snippets:expand");
+            await lumine.commands.dispatch(editorElement, "snippets:expand");
             expect(editor.lineTextForBufferRow(0)).toBe('"key": value');
             expect(editor.getSelectedBufferRange()).toEqual([
               [0, 0],
               [0, 5],
             ]);
             editor.insertText("foo");
-            simulateTabKeyEvent();
+            await simulateTabKeyEvent();
             expect(editor.getSelectedBufferRange()).toEqual([
               [0, 5],
               [0, 10],
@@ -590,39 +601,39 @@ third tabstop $3\
         });
 
         describe("when the only tab stop is an end stop", () => {
-          it("terminates the snippet immediately after moving the cursor to the end stop", () => {
+          it("terminates the snippet immediately after moving the cursor to the end stop", async () => {
             editor.setText("");
             editor.insertText("t1a");
-            simulateTabKeyEvent();
+            await simulateTabKeyEvent();
 
             expect(editor.lineTextForBufferRow(0)).toBe("something  strange");
             expect(editor.getCursorBufferPosition()).toEqual([0, 10]);
 
-            simulateTabKeyEvent();
+            await simulateTabKeyEvent();
             expect(editor.lineTextForBufferRow(0)).toBe("something    strange");
             expect(editor.getCursorBufferPosition()).toEqual([0, 12]);
           });
         });
 
         describe("when tab stops are separated by blank lines", () => {
-          it("correctly places the tab stops (regression)", () => {
+          it("correctly places the tab stops (regression)", async () => {
             editor.setText("");
             editor.insertText("t7");
-            lumine.commands.dispatch(editorElement, "snippets:expand");
-            lumine.commands.dispatch(editorElement, "snippets:next-tab-stop");
+            await lumine.commands.dispatch(editorElement, "snippets:expand");
+            await lumine.commands.dispatch(editorElement, "snippets:next-tab-stop");
             expect(editor.getCursorBufferPosition()).toEqual([3, 25]);
           });
         });
 
         describe("when the cursor is moved beyond the bounds of the current tab stop", () => {
-          it("terminates the snippet", () => {
+          it("terminates the snippet", async () => {
             editor.setCursorScreenPosition([2, 0]);
             editor.insertText("t2");
-            simulateTabKeyEvent();
+            await simulateTabKeyEvent();
 
             editor.moveUp();
             editor.moveLeft();
-            simulateTabKeyEvent();
+            await simulateTabKeyEvent();
 
             expect(editor.lineTextForBufferRow(2)).toBe("go here next:(  ) and finally go here:()");
             expect(editor.getCursorBufferPosition()).toEqual([2, 16]);
@@ -630,20 +641,20 @@ third tabstop $3\
             // test we can terminate with shift-tab
             editor.setCursorScreenPosition([4, 0]);
             editor.insertText("t2");
-            simulateTabKeyEvent();
-            simulateTabKeyEvent();
+            await simulateTabKeyEvent();
+            await simulateTabKeyEvent();
 
             editor.moveRight();
-            simulateTabKeyEvent({ shift: true });
+            await simulateTabKeyEvent({ shift: true });
             expect(editor.getCursorBufferPosition()).toEqual([4, 15]);
           });
         });
 
         describe("when the cursor is moved within the bounds of the current tab stop", () => {
-          it("should not terminate the snippet", () => {
+          it("should not terminate the snippet", async () => {
             editor.setCursorScreenPosition([0, 0]);
             editor.insertText("t8");
-            simulateTabKeyEvent();
+            await simulateTabKeyEvent();
 
             expect(editor.lineTextForBufferRow(0)).toBe("with placeholder test");
             editor.moveRight();
@@ -651,7 +662,7 @@ third tabstop $3\
             editor.insertText("foo");
             expect(editor.lineTextForBufferRow(0)).toBe("with placeholder tesfoot");
 
-            simulateTabKeyEvent();
+            await simulateTabKeyEvent();
             expect(editor.lineTextForBufferRow(1)).toBe(
               "without placeholder var quicksort = function () {",
             );
@@ -668,10 +679,10 @@ third tabstop $3\
         });
 
         describe("when the backspace is press within the bounds of the current tab stop", () => {
-          it("should not terminate the snippet", () => {
+          it("should not terminate the snippet", async () => {
             editor.setCursorScreenPosition([0, 0]);
             editor.insertText("t8");
-            simulateTabKeyEvent();
+            await simulateTabKeyEvent();
 
             expect(editor.lineTextForBufferRow(0)).toBe("with placeholder test");
             editor.moveRight();
@@ -679,7 +690,7 @@ third tabstop $3\
             editor.insertText("foo");
             expect(editor.lineTextForBufferRow(0)).toBe("with placeholder tesfoo");
 
-            simulateTabKeyEvent();
+            await simulateTabKeyEvent();
             expect(editor.lineTextForBufferRow(1)).toBe(
               "without placeholder var quicksort = function () {",
             );
@@ -698,20 +709,20 @@ third tabstop $3\
 
       describe("when the snippet contains hard tabs", () => {
         describe("when the edit session is in soft-tabs mode", () => {
-          it("translates hard tabs in the snippet to the appropriate number of spaces", () => {
+          it("translates hard tabs in the snippet to the appropriate number of spaces", async () => {
             expect(editor.getSoftTabs()).toBeTruthy();
             editor.insertText("t3");
-            simulateTabKeyEvent();
+            await simulateTabKeyEvent();
             expect(editor.lineTextForBufferRow(1)).toBe("  line 2");
             expect(editor.getCursorBufferPosition()).toEqual([1, 8]);
           });
         });
 
         describe("when the edit session is in hard-tabs mode", () => {
-          it("inserts hard tabs in the snippet directly", () => {
+          it("inserts hard tabs in the snippet directly", async () => {
             editor.setSoftTabs(false);
             editor.insertText("t3");
-            simulateTabKeyEvent();
+            await simulateTabKeyEvent();
             expect(editor.lineTextForBufferRow(1)).toBe("\tline 2");
             expect(editor.getCursorBufferPosition()).toEqual([1, 7]);
           });
@@ -720,10 +731,10 @@ third tabstop $3\
 
       describe("when the snippet prefix is indented", () => {
         describe("when the snippet spans a single line", () => {
-          it("does not indent the next line", () => {
+          it("does not indent the next line", async () => {
             editor.setCursorScreenPosition([2, Infinity]);
             editor.insertText(" t1");
-            lumine.commands.dispatch(editorElement, "snippets:expand");
+            await lumine.commands.dispatch(editorElement, "snippets:expand");
             expect(editor.lineTextForBufferRow(3)).toBe(
               "    var pivot = items.shift(), current, left = [], right = [];",
             );
@@ -731,11 +742,11 @@ third tabstop $3\
         });
 
         describe("when the snippet spans multiple lines", () => {
-          it("indents the subsequent lines of the snippet to be even with the start of the first line", () => {
+          it("indents the subsequent lines of the snippet to be even with the start of the first line", async () => {
             expect(editor.getSoftTabs()).toBeTruthy();
             editor.setCursorScreenPosition([2, Infinity]);
             editor.insertText(" t3");
-            lumine.commands.dispatch(editorElement, "snippets:expand");
+            await lumine.commands.dispatch(editorElement, "snippets:expand");
             expect(editor.lineTextForBufferRow(2)).toBe(
               "    if (items.length <= 1) return items; line 1",
             );
@@ -753,13 +764,13 @@ third tabstop $3\
           // TODO: Figure out why `editor.update({autoIndent: true})` never gets resolved.
         });
 
-        it("places tab stops correctly", () => {
+        it("places tab stops correctly", async () => {
           expect(editor.getSoftTabs()).toBeTruthy();
           editor.setCursorScreenPosition([2, Infinity]);
           editor.insertText(" t3");
-          lumine.commands.dispatch(editorElement, "snippets:expand");
+          await lumine.commands.dispatch(editorElement, "snippets:expand");
           expect(editor.getCursorBufferPosition()).toEqual([3, 12]);
-          lumine.commands.dispatch(editorElement, "snippets:next-tab-stop");
+          await lumine.commands.dispatch(editorElement, "snippets:next-tab-stop");
           expect(editor.getCursorBufferPosition()).toEqual([4, 4]);
         });
 
@@ -769,7 +780,7 @@ third tabstop $3\
           await editor.whenGrammarSettled();
           editor.insertText("t4b");
           await editor.whenGrammarSettled();
-          lumine.commands.dispatch(editorElement, "snippets:expand");
+          await lumine.commands.dispatch(editorElement, "snippets:expand");
 
           expect(editor.lineTextForBufferRow(3)).toBe("     = line 1 {"); // 4 + 1 spaces (because the tab stop is invisible)
           expect(editor.lineTextForBufferRow(4)).toBe("      line 2");
@@ -783,13 +794,13 @@ third tabstop $3\
           await editor.whenGrammarSettled();
           editor.insertText("t4");
           await editor.whenGrammarSettled();
-          lumine.commands.dispatch(editorElement, "snippets:expand");
+          await lumine.commands.dispatch(editorElement, "snippets:expand");
 
           expect(editor.getSelectedBufferRange()).toEqual([
             [3, 9],
             [3, 10],
           ]);
-          lumine.commands.dispatch(editorElement, "snippets:next-tab-stop");
+          await lumine.commands.dispatch(editorElement, "snippets:next-tab-stop");
           expect(editor.getSelectedBufferRange()).toEqual([
             [4, 6],
             [4, 13],
@@ -797,13 +808,13 @@ third tabstop $3\
 
           editor.insertText("t4");
           await editor.whenGrammarSettled();
-          lumine.commands.dispatch(editorElement, "snippets:expand");
+          await lumine.commands.dispatch(editorElement, "snippets:expand");
 
           expect(editor.getSelectedBufferRange()).toEqual([
             [4, 11],
             [4, 12],
           ]);
-          lumine.commands.dispatch(editorElement, "snippets:next-tab-stop");
+          await lumine.commands.dispatch(editorElement, "snippets:next-tab-stop");
           expect(editor.getSelectedBufferRange()).toEqual([
             [5, 8],
             [5, 15],
@@ -813,13 +824,13 @@ third tabstop $3\
           await editor.whenGrammarSettled();
           editor.insertText("t4");
           await editor.whenGrammarSettled();
-          lumine.commands.dispatch(editorElement, "snippets:expand");
+          await lumine.commands.dispatch(editorElement, "snippets:expand");
 
           expect(editor.getSelectedBufferRange()).toEqual([
             [0, 5],
             [0, 6],
           ]);
-          lumine.commands.dispatch(editorElement, "snippets:next-tab-stop");
+          await lumine.commands.dispatch(editorElement, "snippets:next-tab-stop");
           expect(editor.getSelectedBufferRange()).toEqual([
             [1, 2],
             [1, 9],
@@ -833,7 +844,7 @@ third tabstop $3\
           await editor.whenGrammarSettled();
           expect(editor.getCursorScreenPosition()).toEqual([0, 4]);
 
-          simulateTabKeyEvent();
+          await simulateTabKeyEvent();
           expect(editor.lineTextForBufferRow(0)).toBe("t113  var quicksort = function () {");
           expect(editor.getCursorScreenPosition()).toEqual([0, 6]);
 
@@ -844,7 +855,7 @@ third tabstop $3\
           await editor.whenGrammarSettled();
           expect(editor.getCursorScreenPosition()).toEqual([0, 3]);
 
-          simulateTabKeyEvent();
+          await simulateTabKeyEvent();
           expect(editor.lineTextForBufferRow(0)).toBe(
             "this is another testvar quicksort = function () {",
           );
@@ -858,7 +869,7 @@ third tabstop $3\
           await editor.whenGrammarSettled();
           expect(editor.getCursorScreenPosition()).toEqual([0, 3]);
 
-          simulateTabKeyEvent();
+          await simulateTabKeyEvent();
           expect(editor.lineTextForBufferRow(0)).toBe(
             "@this is a testvar quicksort = function () {",
           );
@@ -868,33 +879,33 @@ third tabstop $3\
     });
 
     describe("when the word preceding the cursor ends with a snippet prefix", () => {
-      it("inserts a tab as normal", () => {
+      it("inserts a tab as normal", async () => {
         editor.insertText("t1t1t1");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         expect(editor.lineTextForBufferRow(0)).toBe("t1t1t1  var quicksort = function () {");
       });
     });
 
     describe("when the letters preceding the cursor don't match a snippet", () => {
-      it("inserts a tab as normal", () => {
+      it("inserts a tab as normal", async () => {
         editor.insertText("xxte");
         expect(editor.getCursorScreenPosition()).toEqual([0, 4]);
 
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         expect(editor.lineTextForBufferRow(0)).toBe("xxte  var quicksort = function () {");
         expect(editor.getCursorScreenPosition()).toEqual([0, 6]);
       });
     });
 
     describe("when text is selected", () => {
-      it("inserts a tab as normal", () => {
+      it("inserts a tab as normal", async () => {
         editor.insertText("t1");
         editor.setSelectedBufferRange([
           [0, 0],
           [0, 2],
         ]);
 
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         expect(editor.lineTextForBufferRow(0)).toBe("  t1var quicksort = function () {");
         expect(editor.getSelectedBufferRange()).toEqual([
           [0, 0],
@@ -905,41 +916,41 @@ third tabstop $3\
 
     describe("when a previous snippet expansion has just been undone", () => {
       describe("when the tab stops appear in the middle of the snippet", () => {
-        it("expands the snippet based on the current prefix rather than jumping to the old snippet's tab stop", () => {
+        it("expands the snippet based on the current prefix rather than jumping to the old snippet's tab stop", async () => {
           editor.insertText("t6\n");
           editor.setCursorBufferPosition([0, 2]);
-          simulateTabKeyEvent();
+          await simulateTabKeyEvent();
           expect(editor.lineTextForBufferRow(0)).toBe("first line");
           editor.undo();
           expect(editor.lineTextForBufferRow(0)).toBe("t6");
-          simulateTabKeyEvent();
+          await simulateTabKeyEvent();
           expect(editor.lineTextForBufferRow(0)).toBe("first line");
         });
       });
 
       describe("when the tab stops appear at the beginning and then the end of snippet", () => {
-        it("expands the snippet based on the current prefix rather than jumping to the old snippet's tab stop", () => {
+        it("expands the snippet based on the current prefix rather than jumping to the old snippet's tab stop", async () => {
           editor.insertText("t6b\n");
           editor.setCursorBufferPosition([0, 3]);
-          simulateTabKeyEvent();
+          await simulateTabKeyEvent();
           expect(editor.lineTextForBufferRow(0)).toBe("expanded");
           editor.undo();
           expect(editor.lineTextForBufferRow(0)).toBe("t6b");
-          simulateTabKeyEvent();
+          await simulateTabKeyEvent();
           expect(editor.lineTextForBufferRow(0)).toBe("expanded");
           expect(editor.getCursorBufferPosition()).toEqual([0, 0]);
         });
       });
 
       describe("when the tab stops appear at the end and then the beginning of snippet", () => {
-        it("expands the snippet based on the current prefix rather than jumping to the old snippet's tab stop", () => {
+        it("expands the snippet based on the current prefix rather than jumping to the old snippet's tab stop", async () => {
           editor.insertText("t6c\n");
           editor.setCursorBufferPosition([0, 3]);
-          simulateTabKeyEvent();
+          await simulateTabKeyEvent();
           expect(editor.lineTextForBufferRow(0)).toBe("expanded");
           editor.undo();
           expect(editor.lineTextForBufferRow(0)).toBe("t6c");
-          simulateTabKeyEvent();
+          await simulateTabKeyEvent();
           expect(editor.lineTextForBufferRow(0)).toBe("expanded");
           expect(editor.getCursorBufferPosition()).toEqual([0, 8]);
         });
@@ -947,37 +958,37 @@ third tabstop $3\
     });
 
     describe("when the prefix contains non-word characters", () => {
-      it("selects the non-word characters as part of the prefix", () => {
+      it("selects the non-word characters as part of the prefix", async () => {
         editor.insertText("@unique");
         expect(editor.getCursorScreenPosition()).toEqual([0, 7]);
 
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         expect(editor.lineTextForBufferRow(0)).toBe("@unique seevar quicksort = function () {");
         expect(editor.getCursorScreenPosition()).toEqual([0, 11]);
 
         editor.setCursorBufferPosition([10, 0]);
         editor.insertText("'@unique");
 
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         expect(editor.lineTextForBufferRow(10)).toBe("'@unique see");
         expect(editor.getCursorScreenPosition()).toEqual([10, 12]);
       });
 
-      it("does not select the whitespace before the prefix", () => {
+      it("does not select the whitespace before the prefix", async () => {
         editor.insertText("a; @unique");
         expect(editor.getCursorScreenPosition()).toEqual([0, 10]);
 
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         expect(editor.lineTextForBufferRow(0)).toBe("a; @unique seevar quicksort = function () {");
         expect(editor.getCursorScreenPosition()).toEqual([0, 14]);
       });
     });
 
     describe("when snippet contains tabstops with or without placeholder", () => {
-      it("should create two markers", () => {
+      it("should create two markers", async () => {
         editor.setCursorScreenPosition([0, 0]);
         editor.insertText("t8");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         expect(editor.lineTextForBufferRow(0)).toBe("with placeholder test");
         expect(editor.lineTextForBufferRow(1)).toBe(
           "without placeholder var quicksort = function () {",
@@ -988,7 +999,7 @@ third tabstop $3\
           [0, 21],
         ]);
 
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         expect(editor.getSelectedBufferRange()).toEqual([
           [1, 20],
           [1, 20],
@@ -997,10 +1008,10 @@ third tabstop $3\
     });
 
     describe("when snippet contains multi-caret tabstops with or without placeholder", () => {
-      it("should create two markers", () => {
+      it("should create two markers", async () => {
         editor.setCursorScreenPosition([0, 0]);
         editor.insertText("t9");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         expect(editor.lineTextForBufferRow(0)).toBe("with placeholder test");
         expect(editor.lineTextForBufferRow(1)).toBe(
           "without placeholder var quicksort = function () {",
@@ -1012,21 +1023,21 @@ third tabstop $3\
         );
       });
 
-      it("terminates the snippet when cursors are destroyed", () => {
+      it("terminates the snippet when cursors are destroyed", async () => {
         editor.setCursorScreenPosition([0, 0]);
         editor.insertText("t9b");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         editor.getCursors()[0].destroy();
         editor.getCursorBufferPosition();
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
 
         expect(editor.lineTextForBufferRow(1)).toEqual("without placeholder   ");
       });
 
-      it("terminates the snippet expansion if a new cursor moves outside the bounds of the tab stops", () => {
+      it("terminates the snippet expansion if a new cursor moves outside the bounds of the tab stops", async () => {
         editor.setCursorScreenPosition([0, 0]);
         editor.insertText("t9b");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         editor.insertText("test");
 
         editor.getCursors()[0].destroy();
@@ -1034,32 +1045,32 @@ third tabstop $3\
         editor.moveToBeginningOfLine();
 
         // this should insert whitespace instead of going through tabstops of the previous destroyed snippet
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         expect(editor.lineTextForBufferRow(2).indexOf("  second")).toBe(0);
       });
 
-      it("moves to the second tabstop after a multi-caret tabstop", () => {
+      it("moves to the second tabstop after a multi-caret tabstop", async () => {
         editor.setCursorScreenPosition([0, 0]);
         editor.insertText("t9b");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         editor.insertText("line 1");
 
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         editor.insertText("line 2");
 
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         editor.insertText("line 3");
 
         expect(editor.lineTextForBufferRow(2).indexOf("line 2 ")).toBe(-1);
       });
 
-      it("mirrors input properly when a tabstop's placeholder refers to another tabstop", () => {
+      it("mirrors input properly when a tabstop's placeholder refers to another tabstop", async () => {
         editor.setText("t17");
         editor.setCursorScreenPosition([0, 3]);
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         editor.insertText("foo");
         expect(editor.getText()).toBe("console.log('uh foo', foo);");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         editor.insertText("bar");
         expect(editor.getText()).toBe("console.log('bar', foo);");
       });
@@ -1069,17 +1080,17 @@ third tabstop $3\
       it("transforms the text typed into the first tab stop before setting it in the transformed tab stop", async () => {
         editor.setText("t12");
         editor.setCursorScreenPosition([0, 3]);
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         expect(editor.getText()).toBe("[b][/b]");
         await editor.whenGrammarSettled();
         editor.insertText("img src");
         expect(editor.getText()).toBe("[img src][/img]");
       });
 
-      it("bundles the transform mutations along with the original manual mutation for the purposes of undo and redo", () => {
+      it("bundles the transform mutations along with the original manual mutation for the purposes of undo and redo", async () => {
         editor.setText("t12");
         editor.setCursorScreenPosition([0, 3]);
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         editor.insertText("i");
         expect(editor.getText()).toBe("[i][/i]");
 
@@ -1093,10 +1104,10 @@ third tabstop $3\
         expect(editor.getText()).toBe("[img src][/img]");
       });
 
-      it("can pick the right insertion to use as the primary even if a transformed insertion occurs first in the snippet", () => {
+      it("can pick the right insertion to use as the primary even if a transformed insertion occurs first in the snippet", async () => {
         editor.setText("t16");
         editor.setCursorScreenPosition([0, 3]);
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         expect(editor.lineTextForBufferRow(0)).toBe("& Q & q");
         expect(editor.getCursorBufferPosition()).toEqual([0, 7]);
 
@@ -1104,10 +1115,10 @@ third tabstop $3\
         expect(editor.lineTextForBufferRow(0)).toBe("& RST & rst");
       });
 
-      it("silently ignores a tab stop without a non-transformed insertion to use as the primary", () => {
+      it("silently ignores a tab stop without a non-transformed insertion to use as the primary", async () => {
         editor.setText("t15");
         editor.setCursorScreenPosition([0, 3]);
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         editor.insertText("a");
         expect(editor.lineTextForBufferRow(0)).toBe(" & a");
         expect(editor.getCursorBufferPosition()).toEqual([0, 4]);
@@ -1115,10 +1126,10 @@ third tabstop $3\
     });
 
     describe("when the snippet contains mirrored tab stops and tab stops with transformations", () => {
-      it("adds cursors for the mirrors but not the transformations", () => {
+      it("adds cursors for the mirrors but not the transformations", async () => {
         editor.setText("t13");
         editor.setCursorScreenPosition([0, 3]);
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         expect(editor.getCursors().length).toBe(2);
         expect(editor.getText()).toBe(`\
 placeholder
@@ -1137,10 +1148,10 @@ foo\
     });
 
     describe("when the snippet contains a transformation without a global flag", () => {
-      it("should transform only the first character", () => {
+      it("should transform only the first character", async () => {
         editor.setText("bannerWrong");
         editor.setCursorScreenPosition([0, 11]);
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         expect(editor.getText()).toBe("// \n// ");
         editor.insertText("TEST");
         expect(editor.getText()).toBe("// TEST\n// =EST");
@@ -1148,10 +1159,10 @@ foo\
     });
 
     describe("when the snippet contains a transformation with a global flag", () => {
-      it("should transform all characters", () => {
+      it("should transform all characters", async () => {
         editor.setText("bannerCorrect");
         editor.setCursorScreenPosition([0, 13]);
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         expect(editor.getText()).toBe("// \n// ");
         editor.insertText("TEST");
         expect(editor.getText()).toBe("// TEST\n// ====");
@@ -1160,20 +1171,20 @@ foo\
 
     describe("when the snippet contains generic line comment delimiter variables", () => {
       describe("and the document is JavaScript", () => {
-        it("uses the right delimiters", () => {
+        it("uses the right delimiters", async () => {
           editor.setText("bannerGeneric");
           editor.setCursorScreenPosition([0, 13]);
-          simulateTabKeyEvent();
+          await simulateTabKeyEvent();
           expect(editor.getText()).toBe("// \n// ");
           editor.insertText("TEST");
           expect(editor.getText()).toBe("// TEST\n// ====");
         });
 
         describe("and the editor is indented", () => {
-          it("traverses newlines properly", () => {
+          it("traverses newlines properly", async () => {
             editor.setText("  bannerGeneric");
             editor.setCursorScreenPosition([0, 15]);
-            simulateTabKeyEvent();
+            await simulateTabKeyEvent();
             expect(editor.getText()).toBe("  // \n  // ");
             editor.insertText("TEST");
             expect(editor.getText()).toBe("  // TEST\n  // ====");
@@ -1187,10 +1198,10 @@ foo\
           editor.setText("");
         });
 
-        it("falls back to an empty string, for HTML has no line comment", () => {
+        it("falls back to an empty string, for HTML has no line comment", async () => {
           editor.setText("bannerGeneric");
           editor.setCursorScreenPosition([0, 13]);
-          simulateTabKeyEvent();
+          await simulateTabKeyEvent();
           expect(editor.getText()).toBe(" \n ");
           editor.insertText("TEST");
           expect(editor.getText()).toBe(" TEST\n ====");
@@ -1202,10 +1213,10 @@ foo\
           lumine.grammars.assignLanguageMode(editor, "source.python");
           editor.setText("");
         });
-        it("uses the right delimiters", () => {
+        it("uses the right delimiters", async () => {
           editor.setText("bannerGeneric");
           editor.setCursorScreenPosition([0, 13]);
-          simulateTabKeyEvent();
+          await simulateTabKeyEvent();
           expect(editor.getText()).toBe("# \n# ");
           editor.insertText("TEST");
           expect(editor.getText()).toBe("# TEST\n# ====");
@@ -1224,11 +1235,11 @@ foo\
         kebabcase: "lorem-ipsum-dolor",
       };
       for (let [flag, expected] of Object.entries(expectations)) {
-        it(`should transform ${flag} correctly`, () => {
+        it(`should transform ${flag} correctly`, async () => {
           let trigger = `t_simple_${flag}`;
           editor.setText(trigger);
           editor.setCursorScreenPosition([0, trigger.length]);
-          simulateTabKeyEvent();
+          await simulateTabKeyEvent();
           editor.insertText("lorem Ipsum Dolor");
           expect(editor.getText()).toBe(`lorem Ipsum Dolor ${expected}`);
         });
@@ -1242,25 +1253,25 @@ foo\
         snakecase: "lorem ipsum_dolor",
       };
       for (let [flag, expected] of Object.entries(expectations)) {
-        it(`should transform ${flag} correctly`, () => {
+        it(`should transform ${flag} correctly`, async () => {
           lumine.clipboard.write("lorem Ipsum Dolor");
           let trigger = `v_simple_${flag}`;
           editor.setText(trigger);
           editor.setCursorScreenPosition([0, trigger.length]);
-          simulateTabKeyEvent();
+          await simulateTabKeyEvent();
           expect(editor.getText()).toBe(`lorem Ipsum Dolor ${expected}`);
         });
       }
     });
 
     describe("when the snippet contains multiple tab stops, some with transformations and some without", () => {
-      it("does not get confused", () => {
+      it("does not get confused", async () => {
         editor.setText("t14");
         editor.setCursorScreenPosition([0, 3]);
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         expect(editor.getCursors().length).toBe(2);
         expect(editor.getText()).toBe("placeholder PLACEHOLDER  ANOTHER another ");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         expect(editor.getCursors().length).toBe(2);
         editor.insertText("FOO");
         expect(editor.getText()).toBe("placeholder PLACEHOLDER  FOO foo FOO");
@@ -1268,79 +1279,79 @@ foo\
     });
 
     describe("when the snippet contains a tab stop with choices", () => {
-      it("uses the first option as the placeholder", () => {
+      it("uses the first option as the placeholder", async () => {
         editor.setText("");
         editor.insertText("choice");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
 
         expect(editor.getText()).toBe("one");
       });
     });
 
     describe("when the snippet contains VSCode-style if-else syntax", () => {
-      it("understands if but no else", () => {
+      it("understands if but no else", async () => {
         editor.setText("");
         editor.insertText("vsifelse1");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
 
         editor.insertText("wat");
         expect(editor.getText()).toEqual("wat WAT");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
 
         editor.setText("");
         editor.insertText("vsifelse1");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
 
         editor.insertText("foo");
         expect(editor.getText()).toEqual("foo ");
       });
 
-      it("understands else but no if", () => {
+      it("understands else but no if", async () => {
         editor.setText("");
         editor.insertText("vsifelse2");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
 
         editor.insertText("wat");
         expect(editor.getText()).toEqual("wat ");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
 
         editor.setText("");
         editor.insertText("vsifelse2");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
 
         editor.insertText("foo");
         expect(editor.getText()).toEqual("foo nah");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
 
         // There are two syntaxes for this.
         editor.setText("");
         editor.insertText("vsifelse2a");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
 
         editor.insertText("wat");
         expect(editor.getText()).toEqual("wat ");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
 
         editor.setText("");
         editor.insertText("vsifelse2a");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
 
         editor.insertText("foo");
         expect(editor.getText()).toEqual("foo nah");
       });
 
-      it("understands both if and else", () => {
+      it("understands both if and else", async () => {
         editor.setText("");
         editor.insertText("vsifelse3");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
 
         editor.insertText("wat");
         expect(editor.getText()).toEqual("wat WAT");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
 
         editor.setText("");
         editor.insertText("vsifelse3");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
 
         editor.insertText("foo");
         expect(editor.getText()).toEqual("foo nah");
@@ -1348,52 +1359,52 @@ foo\
     });
 
     describe("when the snippet contains TextMate-style if-else syntax", () => {
-      it("understands if but no else", () => {
+      it("understands if but no else", async () => {
         editor.setText("");
         editor.insertText("ifelse1");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
 
         editor.insertText("wat");
         expect(editor.getText()).toEqual("wat hey");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
 
         editor.setText("");
         editor.insertText("ifelse1");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
 
         editor.insertText("foo");
         expect(editor.getText()).toEqual("foo foo");
       });
 
-      it("understands else but no if", () => {
+      it("understands else but no if", async () => {
         editor.setText("");
         editor.insertText("ifelse2");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
 
         editor.insertText("wat");
         expect(editor.getText()).toEqual("wat ");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
 
         editor.setText("");
         editor.insertText("ifelse2");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
 
         editor.insertText("foo");
         expect(editor.getText()).toEqual("foo hey");
       });
 
-      it("understands both if and else", () => {
+      it("understands both if and else", async () => {
         editor.setText("");
         editor.insertText("ifelse3");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
 
         editor.insertText("something wat");
         expect(editor.getText()).toEqual("something wat Y");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
 
         editor.setText("");
         editor.insertText("ifelse3");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
 
         editor.insertText("something foo");
         expect(editor.getText()).toEqual("something foo N");
@@ -1401,10 +1412,10 @@ foo\
     });
 
     describe("when the snippet has a transformed tab stop such that it is possible to move the cursor between the ordinary tab stop and its transformed version without an intermediate step", () => {
-      it("terminates the snippet upon such a cursor move", () => {
+      it("terminates the snippet upon such a cursor move", async () => {
         editor.setText("t18");
         editor.setCursorScreenPosition([0, 3]);
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         expect(editor.getText()).toBe("// \n// ");
         expect(editor.getCursorBufferPosition()).toEqual([0, 3]);
         editor.insertText("wat");
@@ -1420,10 +1431,10 @@ foo\
     });
 
     describe("when the snippet has two adjacent tab stops", () => {
-      it("ensures insertions are treated as part of the active tab stop", () => {
+      it("ensures insertions are treated as part of the active tab stop", async () => {
         editor.setText("t19");
         editor.setCursorScreenPosition([0, 3]);
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         expect(editor.getText()).toBe("barbaz");
         expect(editor.getSelectedBufferRange()).toEqual([
           [0, 0],
@@ -1433,7 +1444,7 @@ foo\
         expect(editor.getText()).toBe("wbaz");
         editor.insertText("at");
         expect(editor.getText()).toBe("watbaz");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         expect(editor.getSelectedBufferRange()).toEqual([
           [0, 3],
           [0, 6],
@@ -1444,10 +1455,10 @@ foo\
     });
 
     describe("when the snippet has a placeholder with a tabstop mirror at its edge", () => {
-      it("allows the associated marker to include the inserted text", () => {
+      it("allows the associated marker to include the inserted text", async () => {
         editor.setText("t20");
         editor.setCursorScreenPosition([0, 3]);
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         expect(editor.getText()).toBe("foobarbaz ");
         expect(editor.getCursors().length).toBe(2);
         let selections = editor.getSelections();
@@ -1461,24 +1472,24 @@ foo\
         ]);
         editor.insertText("nah");
         expect(editor.getText()).toBe("nahbarbaz nah");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         editor.insertText("meh");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         editor.insertText("yea");
         expect(editor.getText()).toBe("nahmehyea");
       });
     });
 
     describe("when the snippet contains tab stops with an index >= 10", () => {
-      it("parses and orders the indices correctly", () => {
+      it("parses and orders the indices correctly", async () => {
         editor.setText("t10");
         editor.setCursorScreenPosition([0, 3]);
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         expect(editor.getText()).toBe("hello large indices");
         expect(editor.getCursorBufferPosition()).toEqual([0, 19]);
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         expect(editor.getCursorBufferPosition()).toEqual([0, 5]);
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         expect(editor.getSelectedBufferRange()).toEqual([
           [0, 6],
           [0, 11],
@@ -1488,12 +1499,12 @@ foo\
 
     describe("when there are multiple cursors", () => {
       describe("when the cursors share a common snippet prefix", () => {
-        it("expands the snippet for all cursors and allows simultaneous editing", () => {
+        it("expands the snippet for all cursors and allows simultaneous editing", async () => {
           editor.insertText("t9");
           editor.setCursorBufferPosition([12, 2]);
           editor.insertText(" t9");
           editor.addCursorAtBufferPosition([0, 2]);
-          simulateTabKeyEvent();
+          await simulateTabKeyEvent();
 
           expect(editor.lineTextForBufferRow(0)).toBe("with placeholder test");
           expect(editor.lineTextForBufferRow(1)).toBe(
@@ -1511,11 +1522,11 @@ foo\
           expect(editor.lineTextForBufferRow(14)).toBe("without placeholder hello");
         });
 
-        it("applies transformations identically to single-expansion mode", () => {
+        it("applies transformations identically to single-expansion mode", async () => {
           editor.setText("t14\nt14");
           editor.setCursorBufferPosition([1, 3]);
           editor.addCursorAtBufferPosition([0, 3]);
-          simulateTabKeyEvent();
+          await simulateTabKeyEvent();
 
           expect(editor.lineTextForBufferRow(0)).toBe("placeholder PLACEHOLDER  ANOTHER another ");
           expect(editor.lineTextForBufferRow(1)).toBe("placeholder PLACEHOLDER  ANOTHER another ");
@@ -1525,18 +1536,18 @@ foo\
           expect(editor.lineTextForBufferRow(0)).toBe("testing TESTING testing ANOTHER another ");
           expect(editor.lineTextForBufferRow(1)).toBe("testing TESTING testing ANOTHER another ");
 
-          simulateTabKeyEvent();
+          await simulateTabKeyEvent();
           editor.insertText("AGAIN");
 
           expect(editor.lineTextForBufferRow(0)).toBe("testing TESTING testing AGAIN again AGAIN");
           expect(editor.lineTextForBufferRow(1)).toBe("testing TESTING testing AGAIN again AGAIN");
         });
 
-        it("bundles transform-induced mutations into a single history entry along with their triggering edit, even across multiple snippets", () => {
+        it("bundles transform-induced mutations into a single history entry along with their triggering edit, even across multiple snippets", async () => {
           editor.setText("t14\nt14");
           editor.setCursorBufferPosition([1, 3]);
           editor.addCursorAtBufferPosition([0, 3]);
-          simulateTabKeyEvent();
+          await simulateTabKeyEvent();
 
           expect(editor.lineTextForBufferRow(0)).toBe("placeholder PLACEHOLDER  ANOTHER another ");
           expect(editor.lineTextForBufferRow(1)).toBe("placeholder PLACEHOLDER  ANOTHER another ");
@@ -1546,7 +1557,7 @@ foo\
           expect(editor.lineTextForBufferRow(0)).toBe("testing TESTING testing ANOTHER another ");
           expect(editor.lineTextForBufferRow(1)).toBe("testing TESTING testing ANOTHER another ");
 
-          simulateTabKeyEvent();
+          await simulateTabKeyEvent();
           editor.insertText("AGAIN");
 
           expect(editor.lineTextForBufferRow(0)).toBe("testing TESTING testing AGAIN again AGAIN");
@@ -1570,11 +1581,11 @@ foo\
         });
 
         describe("when there are many tabstops", () => {
-          it("moves the cursors between the tab stops for their corresponding snippet when tab and shift-tab are pressed", () => {
+          it("moves the cursors between the tab stops for their corresponding snippet when tab and shift-tab are pressed", async () => {
             editor.addCursorAtBufferPosition([7, 5]);
             editor.addCursorAtBufferPosition([12, 2]);
             editor.insertText("t11");
-            simulateTabKeyEvent();
+            await simulateTabKeyEvent();
 
             const cursors = editor.getCursors();
             expect(cursors.length).toEqual(3);
@@ -1586,7 +1597,7 @@ foo\
             expect(cursors[1].selection.isEmpty()).toBe(true);
             expect(cursors[2].selection.isEmpty()).toBe(true);
 
-            simulateTabKeyEvent();
+            await simulateTabKeyEvent();
             expect(cursors[0].getBufferPosition()).toEqual([0, 7]);
             expect(cursors[1].getBufferPosition()).toEqual([7, 12]);
             expect(cursors[2].getBufferPosition()).toEqual([12, 9]);
@@ -1597,7 +1608,7 @@ foo\
             expect(cursors[1].selection.getText()).toEqual("two");
             expect(cursors[2].selection.getText()).toEqual("two");
 
-            simulateTabKeyEvent();
+            await simulateTabKeyEvent();
             expect(cursors[0].getBufferPosition()).toEqual([0, 13]);
             expect(cursors[1].getBufferPosition()).toEqual([7, 18]);
             expect(cursors[2].getBufferPosition()).toEqual([12, 15]);
@@ -1605,7 +1616,7 @@ foo\
             expect(cursors[1].selection.isEmpty()).toBe(true);
             expect(cursors[2].selection.isEmpty()).toBe(true);
 
-            simulateTabKeyEvent();
+            await simulateTabKeyEvent();
             expect(cursors[0].getBufferPosition()).toEqual([0, 0]);
             expect(cursors[1].getBufferPosition()).toEqual([7, 5]);
             expect(cursors[2].getBufferPosition()).toEqual([12, 2]);
@@ -1617,27 +1628,27 @@ foo\
       });
 
       describe("when the cursors do not share common snippet prefixes", () => {
-        it("inserts tabs as normal", () => {
+        it("inserts tabs as normal", async () => {
           editor.insertText("t9");
           editor.setCursorBufferPosition([12, 2]);
           editor.insertText(" t8");
           editor.addCursorAtBufferPosition([0, 2]);
-          simulateTabKeyEvent();
+          await simulateTabKeyEvent();
           expect(editor.lineTextForBufferRow(0)).toBe("t9  var quicksort = function () {");
           expect(editor.lineTextForBufferRow(12)).toBe("}; t8 ");
         });
       });
 
       describe("when a snippet is triggered within an existing snippet expansion", () => {
-        it("ignores the snippet expansion and goes to the next tab stop", () => {
+        it("ignores the snippet expansion and goes to the next tab stop", async () => {
           editor.addCursorAtBufferPosition([7, 5]);
           editor.addCursorAtBufferPosition([12, 2]);
           editor.insertText("t11");
-          simulateTabKeyEvent();
-          simulateTabKeyEvent();
+          await simulateTabKeyEvent();
+          await simulateTabKeyEvent();
 
           editor.insertText("t1");
-          simulateTabKeyEvent();
+          await simulateTabKeyEvent();
 
           const cursors = editor.getCursors();
           expect(cursors.length).toEqual(3);
@@ -1665,7 +1676,7 @@ foo\
 
         editor.insertText("t2");
         await editor.whenGrammarSettled();
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         editor.insertText("ABC");
         await editor.whenGrammarSettled();
         expect(editor.getText()).toContain("go here first:(ABC)");
@@ -1674,7 +1685,7 @@ foo\
         editor.undo();
         await editor.whenGrammarSettled();
         expect(editor.getText()).toBe("t2");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         editor.insertText("ABC");
         expect(editor.getText()).toContain("go here first:(ABC)");
       });
@@ -1781,8 +1792,8 @@ foo\
         editor.setText("");
       });
 
-      it("expands the snippet when the scope matches", () => {
-        lumine.commands.dispatch(editor.element, "snippets:some-command-snippet");
+      it("expands the snippet when the scope matches", async () => {
+        await lumine.commands.dispatch(editor.element, "snippets:some-command-snippet");
         let cursor = editor.getLastCursor();
         cursor.getBufferPosition();
         expect(cursor.getBufferPosition()).toEqual([0, 18]);
@@ -1791,30 +1802,30 @@ foo\
         editor.insertText("virus");
         expect(editor.getText()).toBe("lorem ipsum dolor virus sit amet");
 
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         expect(editor.getSelectedBufferRange()).toEqual([
           [0, 28],
           [0, 32],
         ]);
       });
 
-      it("expands the snippet even when a prefix is defined", () => {
-        lumine.commands.dispatch(editor.element, "snippets:command-with-prefix");
+      it("expands the snippet even when a prefix is defined", async () => {
+        await lumine.commands.dispatch(editor.element, "snippets:command-with-prefix");
         let cursor = editor.getLastCursor();
         let pos = cursor.getBufferPosition();
         expect(pos.toArray().join(",")).toBe("0,9");
         expect(editor.getText()).toBe("this had  a prefix");
       });
 
-      it("does nothing when the scope does not match", () => {
-        lumine.commands.dispatch(editor.element, "snippets:some-python-command-snippet");
+      it("does nothing when the scope does not match", async () => {
+        await lumine.commands.dispatch(editor.element, "snippets:some-python-command-snippet");
         expect(editor.getText()).toBe("");
       });
 
-      it("uses language-specific comment delimiters", () => {
+      it("uses language-specific comment delimiters", async () => {
         editor.setText("something");
         editor.selectAll();
-        lumine.commands.dispatch(editor.element, "snippets:wrap-in-block-comment");
+        await lumine.commands.dispatch(editor.element, "snippets:wrap-in-block-comment");
         expect(editor.getText()).toBe("/* something */");
       });
     });
@@ -1825,8 +1836,8 @@ foo\
         editor.setText("");
       });
 
-      it("expands tab stops correctly", () => {
-        lumine.commands.dispatch(editor.element, "snippets:wrap-in-html-tag");
+      it("expands tab stops correctly", async () => {
+        await lumine.commands.dispatch(editor.element, "snippets:wrap-in-html-tag");
         let cursor = editor.getLastCursor();
         expect(cursor.getBufferPosition()).toEqual([0, 4]);
         expect(editor.getSelectedText()).toEqual("div");
@@ -1835,14 +1846,14 @@ foo\
 
         expect(editor.getText()).toBe('<aside class="wat"></aside>');
 
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         expect(cursor.getBufferPosition()).toEqual([0, 19]);
       });
 
-      it("uses language-specific comment delimiters", () => {
+      it("uses language-specific comment delimiters", async () => {
         editor.setText("something");
         editor.selectAll();
-        lumine.commands.dispatch(editor.element, "snippets:wrap-in-block-comment");
+        await lumine.commands.dispatch(editor.element, "snippets:wrap-in-block-comment");
         expect(editor.getText()).toBe("<!-- something -->");
       });
     });
@@ -1853,10 +1864,10 @@ foo\
         editor.setText("");
       });
 
-      it("uses language-specific comment delimiters, or empty strings if those delimiters don't exist in Python", () => {
+      it("uses language-specific comment delimiters, or empty strings if those delimiters don't exist in Python", async () => {
         editor.setText("something");
         editor.selectAll();
-        lumine.commands.dispatch(editor.element, "snippets:wrap-in-block-comment");
+        await lumine.commands.dispatch(editor.element, "snippets:wrap-in-block-comment");
         expect(editor.getText()).toBe(" something ");
       });
     });
@@ -1928,42 +1939,42 @@ foo\
       editor.setText("");
     });
 
-    it("interpolates the variables into the snippet expansion", () => {
+    it("interpolates the variables into the snippet expansion", async () => {
       editor.insertText("(selected text)");
       editor.selectToBeginningOfLine();
 
       expect(editor.getSelectedText()).toBe("(selected text)");
-      lumine.commands.dispatch(editor.element, "test-package:test-command-tm-selected-text");
+      await lumine.commands.dispatch(editor.element, "test-package:test-command-tm-selected-text");
       expect(editor.getText()).toBe("lorem ipsum (selected text) dolor sit amet");
     });
 
-    it("does not consider the tab trigger to be part of $TM_SELECTED_TEXT when a snippet is invoked via tab trigger", () => {
+    it("does not consider the tab trigger to be part of $TM_SELECTED_TEXT when a snippet is invoked via tab trigger", async () => {
       editor.insertText("tmSelectedText");
-      simulateTabKeyEvent();
+      await simulateTabKeyEvent();
 
       expect(editor.getText()).toBe("lorem ipsum  dolor sit amet");
     });
 
-    it("interpolates line number variables correctly", () => {
+    it("interpolates line number variables correctly", async () => {
       editor.insertText("ln");
-      simulateTabKeyEvent();
+      await simulateTabKeyEvent();
       expect(editor.getText()).toBe("line is 1 and index is 0");
       editor.setText("");
       editor.insertText("\n\n\nln");
-      simulateTabKeyEvent();
+      await simulateTabKeyEvent();
       let cursor = editor.getLastCursor();
       let lineText = editor.lineTextForBufferRow(cursor.getBufferRow());
       expect(lineText).toBe("line is 4 and index is 3");
     });
 
-    it("interpolates WORKSPACE_NAME correctly", () => {
+    it("interpolates WORKSPACE_NAME correctly", async () => {
       lumine.project.setPaths([path.join(__dirname, "fixtures")]);
       editor.insertText("wn");
-      simulateTabKeyEvent();
+      await simulateTabKeyEvent();
       expect(editor.getText()).toBe("the name of this project is fixtures");
     });
 
-    it("interpolates date variables correctly", () => {
+    it("interpolates date variables correctly", async () => {
       function pad(val) {
         let str = String(val);
         return str.length === 1 ? `0${str}` : str;
@@ -1975,25 +1986,28 @@ foo\
 
       let expected = `Today is ${month} ${day}, ${year}`;
 
-      lumine.commands.dispatch(editor.element, "test-package:test-command-date");
+      await lumine.commands.dispatch(editor.element, "test-package:test-command-date");
       expect(editor.getText()).toBe(expected);
     });
 
-    it("interpolates a CLIPBOARD variable into the snippet expansion", () => {
+    it("interpolates a CLIPBOARD variable into the snippet expansion", async () => {
       lumine.clipboard.write("(clipboard text)");
-      lumine.commands.dispatch(editor.element, "test-package:test-command-clipboard");
+      await lumine.commands.dispatch(editor.element, "test-package:test-command-clipboard");
       expect(editor.getText()).toBe("lorem ipsum (clipboard text) dolor sit amet");
     });
 
-    it("interpolates a transformed variable into the snippet expansion", () => {
+    it("interpolates a transformed variable into the snippet expansion", async () => {
       lumine.clipboard.write("(clipboard 19283 text)");
-      lumine.commands.dispatch(editor.element, "test-package:test-command-clipboard-transformed");
+      await lumine.commands.dispatch(
+        editor.element,
+        "test-package:test-command-clipboard-transformed",
+      );
       expect(editor.getText()).toBe("lorem ipsum (clipboard  text) dolor sit amet");
     });
 
-    it("interpolates an upcased variable", () => {
+    it("interpolates an upcased variable", async () => {
       lumine.clipboard.write("(clipboard Text is Multiple words)");
-      lumine.commands.dispatch(editor.element, "test-package:test-command-clipboard-upcased");
+      await lumine.commands.dispatch(editor.element, "test-package:test-command-clipboard-upcased");
       expect(editor.lineTextForBufferRow(0)).toBe(
         "lorem ipsum (CLIPBOARD TEXT IS MULTIPLE WORDS) dolor sit amet",
       );
@@ -2005,9 +2019,9 @@ foo\
       expect(editor.lineTextForBufferRow(4)).toBe("(clipboard Text is Multiple words)");
     });
 
-    it("interpolates file path variables", () => {
+    it("interpolates file path variables", async () => {
       editor.insertText("fpath");
-      simulateTabKeyEvent();
+      await simulateTabKeyEvent();
       let filePath = editor.getPath();
 
       expect(editor.lineTextForBufferRow(0)).toEqual("file paths:");
@@ -2016,21 +2030,21 @@ foo\
       expect(editor.lineTextForBufferRow(3)).toEqual("sample");
     });
 
-    it("generates truly random values for RANDOM, RANDOM_HEX, and UUID", () => {
+    it("generates truly random values for RANDOM, RANDOM_HEX, and UUID", async () => {
       let reUUID =
         /^[0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12}$/;
       let reRandom = /^\d{6}$/;
       let reRandomHex = /^[0-9a-f]{6}$/;
 
       editor.insertText("rndm");
-      simulateTabKeyEvent();
+      await simulateTabKeyEvent();
       expect(editor.lineTextForBufferRow(0)).toEqual("random number is:");
       let randomFirst = editor.lineTextForBufferRow(1);
       expect(reRandom.test(randomFirst)).toBe(true);
 
       editor.setText("");
       editor.insertText("rndm");
-      simulateTabKeyEvent();
+      await simulateTabKeyEvent();
 
       let randomSecond = editor.lineTextForBufferRow(1);
       expect(reRandom.test(randomSecond)).toBe(true);
@@ -2038,13 +2052,13 @@ foo\
 
       editor.setText("");
       editor.insertText("rndmhex");
-      simulateTabKeyEvent();
+      await simulateTabKeyEvent();
       let randomHex1 = editor.lineTextForBufferRow(1);
       expect(reRandomHex.test(randomHex1)).toBe(true);
 
       editor.setText("");
       editor.insertText("rndmhex");
-      simulateTabKeyEvent();
+      await simulateTabKeyEvent();
       let randomHex2 = editor.lineTextForBufferRow(1);
       expect(reRandomHex.test(randomHex2)).toBe(true);
       expect(randomHex2).not.toEqual(randomHex1);
@@ -2054,13 +2068,13 @@ foo\
       if (SUPPORTS_UUID) {
         editor.setText("");
         editor.insertText("rndmuuid");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         let randomUUID1 = editor.lineTextForBufferRow(1);
         expect(reUUID.test(randomUUID1)).toBe(true);
 
         editor.setText("");
         editor.insertText("rndmuuid");
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         let randomUUID2 = editor.lineTextForBufferRow(1);
         expect(reUUID.test(randomUUID2)).toBe(true);
         expect(randomUUID2).not.toEqual(randomUUID1);
@@ -2073,11 +2087,11 @@ foo\
         editor.setText("");
       });
 
-      it("combines transformations and variable references", () => {
+      it("combines transformations and variable references", async () => {
         editor.insertText("lorem");
         editor.selectToBeginningOfLine();
 
-        lumine.commands.dispatch(editor.element, "test-package:wrap-in-html-tag");
+        await lumine.commands.dispatch(editor.element, "test-package:wrap-in-html-tag");
 
         expect(editor.getText()).toBe(`<div>lorem</div>`);
 
@@ -2085,7 +2099,7 @@ foo\
 
         expect(editor.getText()).toBe('<aside class="wat">lorem</aside>');
 
-        simulateTabKeyEvent();
+        await simulateTabKeyEvent();
         expect(editor.getSelectedText()).toEqual("lorem");
       });
     });
@@ -2112,7 +2126,7 @@ foo\
 
       delete Snippets.availableSnippetsView;
 
-      lumine.commands.dispatch(editor.getElement(), "snippets:available");
+      await lumine.commands.dispatch(editor.getElement(), "snippets:available");
 
       await conditionPromise(() => lumine.workspace.getModalPanels().length === 1);
 
@@ -2173,8 +2187,8 @@ foo\
       expect(availableSnippetsView.editor).toBeNull();
     });
 
-    it("closes the dialog when triggered again", () => {
-      lumine.commands.dispatch(availableSnippetsView.element, "snippets:available");
+    it("closes the dialog when triggered again", async () => {
+      await lumine.commands.dispatch(availableSnippetsView.element, "snippets:available");
       expect(lumine.workspace.getModalPanels().filter((panel) => panel.isVisible()).length).toBe(0);
     });
   });

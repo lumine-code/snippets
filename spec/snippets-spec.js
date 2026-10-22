@@ -1695,16 +1695,13 @@ foo\
   describe("when lumine://.lumine/snippets is opened", () => {
     it("opens ~/.lumine/snippets.json", async () => {
       jasmine.unspy(Snippets, "getUserSnippetsPath");
-      lumine.workspace.destroyActivePaneItem();
+      await lumine.workspace.destroyActivePaneItem();
       const configDirPath = temp.mkdirSync("lumine-config-dir-");
       spyOn(lumine, "getConfigDirPath").and.returnValue(configDirPath);
-      lumine.workspace.open("lumine://.lumine/snippets");
+      const openedEditor = await lumine.workspace.open("lumine://.lumine/snippets");
 
-      await conditionPromise(() => lumine.workspace.getActiveTextEditor() != null);
-
-      expect(lumine.workspace.getActiveTextEditor().getURI()).toBe(
-        path.join(configDirPath, "snippets.json"),
-      );
+      expect(openedEditor).toBe(lumine.workspace.getActiveTextEditor());
+      expect(openedEditor.getURI()).toBe(path.join(configDirPath, "snippets.json"));
     });
   });
 

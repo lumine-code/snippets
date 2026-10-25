@@ -2,6 +2,11 @@ const { Readable } = require("stream");
 const { Disposable, TextBuffer } = require("lumine");
 
 describe("Active snippets across external reloads", () => {
+  // Processing fixtures use a real grammar; None deliberately disables this package.
+  beforeEach(async () => {
+    await lumine.packages.activatePackage("language-text");
+  });
+
   let editor, main, source, detachedEditors;
 
   async function activateSnippets() {

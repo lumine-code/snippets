@@ -1,4 +1,9 @@
 describe("Snippet regex capture transforms", () => {
+  // Processing fixtures use a real grammar; None deliberately disables this package.
+  beforeEach(async () => {
+    await lumine.packages.activatePackage("language-text");
+  });
+
   let main, service, editor;
 
   beforeEach(async () => {

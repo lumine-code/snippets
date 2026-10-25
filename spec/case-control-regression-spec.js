@@ -1,6 +1,11 @@
 const { Disposable } = require("lumine");
 
 describe("Snippet one-character case controls", () => {
+  // Processing fixtures use a real grammar; None deliberately disables this package.
+  beforeEach(async () => {
+    await lumine.packages.activatePackage("language-text");
+  });
+
   let editor, service, main;
 
   beforeEach(async () => {

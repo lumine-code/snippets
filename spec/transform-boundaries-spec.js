@@ -1,6 +1,11 @@
 const { Disposable } = require("lumine");
 
 describe("Snippet transform boundaries in a current editor", () => {
+  // Processing fixtures use a real grammar; None deliberately disables this package.
+  beforeEach(async () => {
+    await lumine.packages.activatePackage("language-text");
+  });
+
   let editor, main, service;
   beforeEach(async () => {
     await lumine.packages.deactivatePackage("snippets");

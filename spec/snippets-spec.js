@@ -6,6 +6,11 @@ const crypto = require("crypto");
 const SUPPORTS_UUID = "randomUUID" in crypto && typeof crypto.randomUUID === "function";
 
 describe("Snippets extension", () => {
+  // Processing fixtures use a real grammar; None deliberately disables this package.
+  beforeEach(async () => {
+    await lumine.packages.activatePackage("language-text");
+  });
+
   let editorElement, editor, languageMode, Snippets, expansionRequests;
 
   const simulateTabKeyEvent = async (param) => {

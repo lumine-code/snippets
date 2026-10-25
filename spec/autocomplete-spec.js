@@ -1,6 +1,11 @@
 const path = require("path");
 
 describe("Snippet autocomplete", () => {
+  // Processing fixtures use a real grammar; None deliberately disables this package.
+  beforeEach(async () => {
+    await lumine.packages.activatePackage("language-text");
+  });
+
   let snippets, provider, autocomplete, editor, editorElement, scopeDescriptor;
 
   const addTestSnippets = () => {

@@ -51,4 +51,40 @@ describe("snippets with no grammar", () => {
     expect(main.getStore).not.toHaveBeenCalled();
     expect(main.getExpansions(editor)).toEqual([]);
   });
+
+  it("keeps prepared service insertions retired after None and the same grammar return", async () => {
+    const grammar = lumine.grammars.grammarForScopeName("text.plain");
+    editor.setGrammar(grammar);
+    const service = main.provideSnippets();
+    const prepared = await service.prepareSnippet("${1:word} $0", editor);
+    editor.setGrammar(lumine.grammars.nullGrammar);
+    editor.setGrammar(grammar);
+    expect(prepared.isCurrent()).toBe(false);
+    prepared.insert(editor.getLastCursor());
+    expect(editor.getText()).toBe("");
+    expect(main.getExpansions(editor)).toEqual([]);
+    const fresh = await service.prepareSnippet("${1:fresh} $0", editor);
+    fresh.insert(editor.getLastCursor());
+    expect(main.getExpansions(editor).length).toBeGreaterThan(0);
+  });
+
+  it("does not create live tab stops when body insertion synchronously selects None", async () => {
+    const grammar = lumine.grammars.grammarForScopeName("text.plain");
+    editor.setGrammar(grammar);
+    const subscription = editor.getBuffer().onDidChange(() => {
+      subscription.dispose();
+      editor.setGrammar(lumine.grammars.nullGrammar);
+    });
+    try {
+      await main.provideSnippets().insertSnippet("${1:word} $0", editor);
+      expect(editor.getGrammar()).toBe(lumine.grammars.nullGrammar);
+      expect(main.editorMarkerLayers.get(editor)?.getMarkers() ?? []).toEqual([]);
+      expect(main.getExpansions(editor)).toEqual([]);
+      editor.setGrammar(grammar);
+      await main.insert("${1:resumed} $0", editor);
+      expect(main.getExpansions(editor).length).toBeGreaterThan(0);
+    } finally {
+      subscription.dispose();
+    }
+  });
 });

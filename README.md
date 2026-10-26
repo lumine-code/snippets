@@ -15,6 +15,8 @@ Fork of [pulsar-edit/pulsar](https://github.com/pulsar-edit/pulsar) (`packages/s
 
 Snippet variables and regular-expression transformations require strings. Inputs exceeding the JavaScript string limit are rejected before reading the range; unused transformations and mirrored placeholders do not materialize selected text.
 
+Prefix lookup reads only the longest registered prefix plus one UTF-16 boundary unit before each cursor. It rejects a containing word that is too long to match and retains support for custom long prefixes, without scanning or copying the complete line.
+
 ![Browse snippets for the current language.](.github/demo.png)
 
 ## Installation

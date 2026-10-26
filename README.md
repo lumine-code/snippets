@@ -13,6 +13,8 @@ Fork of [pulsar-edit/pulsar](https://github.com/pulsar-edit/pulsar) (`packages/s
 - **Variables and transforms**: use LSP and VSCode-style variables with case and sed-style transformations.
 - **User and package snippets**: load snippets from packages and from your user `snippets.json`.
 
+Snippet variables and regular-expression transformations require strings. Inputs exceeding the JavaScript string limit are rejected before reading the range; unused transformations and mirrored placeholders do not materialize selected text.
+
 ![Browse snippets for the current language.](.github/demo.png)
 
 ## Installation

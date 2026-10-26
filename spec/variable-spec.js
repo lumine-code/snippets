@@ -1,22 +1,23 @@
 const Variable = require("../lib/variable");
-const { Point } = require("lumine");
+const { Point, Range } = require("lumine");
 const fs = require("fs");
 const path = require("path");
 const temp = require("@lumine-code/fs-temp").track();
 
 describe("Variable", () => {
+  const wordRange = new Range([0, 0], [0, 4]);
+  const lineText = "this may be considered an entire line for the purposes of variable tests";
+  const lineRange = new Range([9, 0], [9, lineText.length]);
   let fakeCursor = {
     getCurrentWordBufferRange() {
-      return true;
+      return wordRange;
     },
     getBufferRow() {
       return 9;
     },
   };
 
-  let fakeSelectionRange = {
-    isEmpty: () => false,
-  };
+  let fakeSelectionRange = new Range([0, 0], [0, 21]);
 
   let fakeEditor = {
     getTitle() {
@@ -26,10 +27,14 @@ describe("Variable", () => {
       return "/Users/lumine/code/foo.rb";
     },
     getTextInBufferRange(x) {
-      return x === true ? "word" : "this text is selected";
+      return x === wordRange ? "word" : x === lineRange ? lineText : "this text is selected";
     },
-    lineTextForBufferRow() {
-      return `this may be considered an entire line for the purposes of variable tests`;
+    getBuffer() {
+      return {
+        rangeForRow: () => lineRange,
+        clipRange: (range) => range,
+        characterIndexForPosition: (point) => point.row * 100 + point.column,
+      };
     },
   };
 

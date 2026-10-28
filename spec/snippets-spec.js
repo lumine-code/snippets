@@ -131,6 +131,22 @@ describe("Snippets extension", () => {
 
         expect(editor.getText()).toBe("value: async clipboard");
       });
+
+      it("rejects newer edits while the clipboard is pending after accepted input settles", async () => {
+        editor.setText("");
+        const input = Promise.withResolvers();
+        const clipboard = Promise.withResolvers();
+        spyOn(editor, "hasPendingIndentation").and.returnValues(true, false);
+        spyOn(editor, "whenPendingTextInputSettled").and.returnValue(input.promise);
+        spyOn(lumine.clipboard, "read").and.returnValue(clipboard.promise);
+        const insertion = snippetsInterface.insertSnippet("value: $CLIPBOARD", editor);
+        input.resolve(true);
+        await new Promise(setImmediate);
+        await editor.insertText("newer input");
+        clipboard.resolve("stale clipboard");
+        await insertion;
+        expect(editor.getText()).toBe("newer input");
+      });
     });
   });
 

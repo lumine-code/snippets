@@ -64,18 +64,26 @@
     }
   },
   "dependencies": {
-    "@lumine-code/season": "github:lumine-code/season#7b60a343cea3c3efff81b44840eb6a4663b41ffd",
-    "@lumine-code/selector-store": "github:lumine-code/selector-store#f9182feeea4df367a15e64e30f6bc6e00b9bc8f5",
-    "@lumine-code/underscore-plus": "github:lumine-code/underscore-plus#a471a621ceab05e6ea001d4b84a80c62ab518789"
+    "@lumine-code/season": "github:lumine-code/season#78cfc815801cd0ce5388dc9b0749da735d27f5cd",
+    "@lumine-code/selector-store": "github:lumine-code/selector-store#b580a6b36cf26fb74bd30b7c947bf85c49640206",
+    "@lumine-code/underscore-plus": "github:lumine-code/underscore-plus#7a9ccd13ddd739347bbb9ac54048ddf9472f45ab"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@lumine-code/fs-temp": "github:lumine-code/fs-temp#f2ad78026b74af82520aaa07397b611e35807c9f",
-    "eslint": "^10.13.0",
+    "@lumine-code/fs-temp": "github:lumine-code/fs-temp#45485c522d8548846b20b2793adacb2146b53dc1",
+    "eslint": "^10.14.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-n": "^18.5.0",
-    "globals": "^17.13.0",
+    "globals": "^17.14.0",
     "peggy": "^5.1.1",
     "prettier": "^3.9.10"
+  },
+  "overrides": {
+    "eslint@^10.14.0": {
+      "minimatch": "11.0.4"
+    },
+    "@eslint/config-array@0.23.5": {
+      "minimatch": "11.0.4"
+    }
   }
 }

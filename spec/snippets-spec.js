@@ -1798,9 +1798,11 @@ foo\
     });
 
     it("complains about a malformed command name", () => {
-      const expectedMessage = `Cannot register \`i flout the RULES\` for snippet “another snippet with a malformed command name” because the command name isn’t valid. Command names must be all lowercase and use hyphens between words instead of spaces.`;
-      expect(lumine.notifications.addError).toHaveBeenCalledWith(`Snippets error`, {
-        description: expectedMessage,
+      expect(lumine.notifications.addError).toHaveBeenCalledWith("Invalid snippet command name", {
+        description:
+          "Command names must be all lowercase and use hyphens between words instead of spaces.",
+        detail:
+          "Snippet: another snippet with a malformed command name\nCommand: i flout the RULES",
         dismissable: true,
       });
     });

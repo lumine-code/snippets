@@ -69,6 +69,7 @@ type Snippets = {
 | `getUnparsedSnippets()`               | Every snippet as loaded from disk, before parsing. For listing and editing, not for expansion. |
 | `getUserSnippetsPath()`               | The path of the user's own snippets file.                                                      |
 | `insertSnippet(body, editor, cursor)` | Expands a snippet body at the cursor and resolves to the live expansion.                       |
+| `previewSnippet(body)`                | Parses the template into preview text with default placeholders and performs no editor edits.  |
 
 `insertSnippet` also accepts a fourth `{ method }` argument, which records how the expansion was triggered. Leave it out unless you are reproducing one of the package's own commands.
 

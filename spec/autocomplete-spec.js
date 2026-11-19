@@ -133,7 +133,8 @@ describe("Snippet autocomplete", () => {
     expect(autocomplete.autocompleteManager.providerManager.isProviderRegistered(provider)).toBe(
       true,
     );
-    for (const character of "zzdo") editor.insertText(character);
+    for (const text of "zzdo")
+      await editor.dispatchTextInput({ kind: "insert", text }, () => editor.insertText(text));
     await waitForFrames(() => editorElement.querySelector(".autocomplete span.word"), {
       description: "snippet suggestion to appear",
     });

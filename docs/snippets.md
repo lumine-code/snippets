@@ -42,7 +42,12 @@ type Snippets = {
     body: string,
     editor: TextEditor,
     cursors?: Cursor[],
-    options?: { method?: string; adjustIndentation?: boolean; positions?: Point[] },
+    options?: {
+      method?: string;
+      adjustIndentation?: boolean;
+      positions?: Point[];
+      signal?: AbortSignal;
+    },
   ): PreparedSnippet | null | Promise<PreparedSnippet | null>;
   bundledSnippetsLoaded(): boolean;
   snippetsForScopes(scopeDescriptor: ScopeDescriptor): Record<string, Snippet>;
@@ -67,7 +72,7 @@ type Snippets = {
 
 `insertSnippet` also accepts a fourth `{ method }` argument, which records how the expansion was triggered. Leave it out unless you are reproducing one of the package's own commands.
 
-For a batch, call `prepareSnippet` before changing any text. It parses the body once and resolves clipboard and syntax-dependent comment variables for every supplied cursor. Check `isCurrent()` immediately before the transaction, then call `insert(cursor)` once per captured cursor inside it; selection ranges may be adjusted during that transaction. `positions` optionally supplies the planned lookup locations for comment variables, such as the ends of completion edit ranges. Preparation returns `null` after source, cursor or owner changes. Providers without this optional method retain the single-insertion contract.
+For a batch, call `prepareSnippet` before changing any text. It parses the body once and resolves clipboard and syntax-dependent comment variables for every supplied cursor. Check `isCurrent()` immediately before the transaction, then call `insert(cursor)` once per captured cursor. Selection ranges may be adjusted during that transaction. `positions` supplies optional lookup locations for comment variables, such as the ends of completion edit ranges. Use `signal` to cancel preparation or retire a prepared expansion. Preparation returns `null` after cancellation or a change to the source, cursor or owner.
 
 ## Minimal example
 
